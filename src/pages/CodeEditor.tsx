@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Play, RotateCcw, Lightbulb, CheckCircle, Star, ArrowLeft } from 'lucide-react';
 import { Page } from '../App';
-import { runCode as judge0RunCode } from '../utils/runCode';
 import { savePlayerProgress, saveStars } from '../utils/firestore';
 import { recordSession, unlockLessonsBasedOnPerformance } from '../utils/adaptiveAI';
 import ArcaneCodeEditorPanel from '../components/ArcaneCodeEditorPanel';
