@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Play, RotateCcw, Lightbulb, CheckCircle, Star, ArrowLeft } from 'lucide-react';
 import { Page } from '../App';
+import { runCode as judge0RunCode } from '../utils/runCode';
 import { savePlayerProgress, saveStars } from '../utils/firestore';
-import { recordSession, unlockLessonsBasedOnPerformance } from '../utils/adaptiveAI';
+import { recordSession } from '../utils/adaptiveAI';
 import ArcaneCodeEditorPanel from '../components/ArcaneCodeEditorPanel';
 import { javascriptChallenges, javaChallenges, pythonChallenges } from '../data/challenges';
 import { getLevelNarrative } from '../data/lessonTitles';
@@ -20,7 +21,13 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ selectedLanguage, onNavigate })
   const [isRunning, setIsRunning] = useState(false);
   const [currentLevel, setCurrentLevel] = useState(1);
   const [showHint, setShowHint] = useState(false);
+  const [showDetailedHelp, setShowDetailedHelp] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
+  
+  // Debug isCompleted state changes
+  useEffect(() => {
+    console.log('🔍 [CodeEditor] isCompleted state changed to:', isCompleted);
+  }, [isCompleted]);
   const [_justAdvanced, setJustAdvanced] = useState(false);
   const [attempts, setAttempts] = useState(0);
   const [startTime, setStartTime] = useState<number | null>(null);
@@ -113,6 +120,10 @@ const currentChallenge = getEnhancedChallenge();
     setOutput('');
     setIsCompleted(false);
     setShowHint(false);
+    setShowDetailedHelp(false);
+    // BULLETPROOF HINT RESET: Clear hint usage tracking for new level
+    localStorage.setItem('arcane_used_hint', '0');
+    console.log('🔍 BULLETPROOF: Reset hint usage tracking for new level');
     setAttempts(0);
     setStartTime(Date.now());
     setCompletionTime(null);
@@ -151,6 +162,8 @@ const currentChallenge = getEnhancedChallenge();
     });
     
     if (lang === 'javascript') {
+      if (easy) {
+        // EASY PUZZLES (1-10) - Basic concepts
       switch (pat) {
         case 1: return mk('Add Two Numbers', 'Return the sum of a and b.', 'function add(a,b){\n  return __BLANK1__;\n}\nconsole.log(add(2,3))\nconsole.log(add(10,20))', ['5','30'], 'In JavaScript, use the + operator to add two numbers. Return the result of a + b.', [{id:'BLANK1',prompt:'Sum a and b',choices:['a+b','a-b','a*b','a/b'],solution:'a+b'}]);
         case 2: return mk('Is Even', 'Return true if n is even.', 'function isEven(n){\n  return __BLANK1__;\n}\nconsole.log(isEven(4))\nconsole.log(isEven(5))', ['true','false'], 'Use the modulo operator (%) to check if a number is divisible by 2. If n % 2 equals 0, the number is even.', [{id:'BLANK1',prompt:'Check divisibility by 2',choices:['n%2===0','n%2==1','n/2===0','n%3===0'],solution:'n%2===0'}]);
@@ -162,6 +175,35 @@ const currentChallenge = getEnhancedChallenge();
         case 8: return mk('Reverse String', 'Return a reversed string.', 'function rev(s){\n  return __BLANK1__;\n}\nconsole.log(rev("abc"))', ['cba'], 'Split the string into an array, reverse it, then join back into a string.', [{id:'BLANK1',prompt:'Split-reverse-join',choices:['s.split("").reverse().join("")','s.reverse()','reverse(s)','s.split().reverse()'],solution:'s.split("").reverse().join("")'}]);
         case 9: return mk('Count Vowels', 'Count vowels in a string.', 'function countV(s){\n  let c=0;\n  for(const ch of s){ if(__BLANK1__) c++; }\n  return c;\n}\nconsole.log(countV("hello"))', ['2'], 'Use string.includes() to check if a character is in the vowel string "aeiouAEIOU".', [{id:'BLANK1',prompt:'Check if vowel',choices:['"aeiouAEIOU".includes(ch)','ch.isVowel()','vowels.has(ch)','ch in vowels'],solution:'"aeiouAEIOU".includes(ch)'}]);
         default: return mk('Sum Array', 'Sum all numbers in an array.', 'function sum(arr){\n  let s=0; for(const n of arr) s+=__BLANK1__; return s;\n}\nconsole.log(sum([1,2,3]))', ['6'], 'In the loop, add each element (n) to the sum variable.', [{id:'BLANK1',prompt:'Add current number',choices:['n','arr[i]','i','arr.length'],solution:'n'}]);
+        }
+      } else if (inter) {
+        // INTERMEDIATE PUZZLES (11-20) - More complex logic
+        switch (pat) {
+          case 1: return mk('Find Duplicates', 'Find duplicate numbers in an array.', 'function findDuplicates(arr){\n  const seen = new Set();\n  const duplicates = [];\n  for(const num of arr){\n    if(__BLANK1__){\n      duplicates.push(num);\n    } else {\n      seen.add(num);\n    }\n  }\n  return duplicates;\n}\nconsole.log(findDuplicates([1,2,2,3,4,4]))', ['2','4'], 'Check if the number already exists in the Set using seen.has(num).', [{id:'BLANK1',prompt:'Check if already seen',choices:['seen.has(num)','seen.includes(num)','seen.contains(num)','seen[num]'],solution:'seen.has(num)'}]);
+          case 2: return mk('Anagram Checker', 'Check if two strings are anagrams.', 'function isAnagram(s1, s2){\n  if(s1.length !== s2.length) return false;\n  const sorted1 = s1.split("").sort().join("");\n  const sorted2 = s2.split("").sort().join("");\n  return __BLANK1__;\n}\nconsole.log(isAnagram("listen", "silent"))', ['true'], 'Compare the two sorted strings using === operator.', [{id:'BLANK1',prompt:'Compare sorted strings',choices:['sorted1 === sorted2','sorted1 == sorted2','sorted1.equals(sorted2)','sorted1 ==== sorted2'],solution:'sorted1 === sorted2'}]);
+          case 3: return mk('Fibonacci Sequence', 'Generate nth Fibonacci number.', 'function fibonacci(n){\n  if(n <= 1) return n;\n  return __BLANK1__;\n}\nconsole.log(fibonacci(7))', ['13'], 'Fibonacci formula: fib(n) = fib(n-1) + fib(n-2). Use recursive calls.', [{id:'BLANK1',prompt:'Recursive formula',choices:['fibonacci(n-1) + fibonacci(n-2)','fibonacci(n-1) - fibonacci(n-2)','fibonacci(n) + fibonacci(n-1)','n + fibonacci(n-1)'],solution:'fibonacci(n-1) + fibonacci(n-2)'}]);
+          case 4: return mk('Prime Checker', 'Check if a number is prime.', 'function isPrime(n){\n  if(n < 2) return false;\n  for(let i = 2; i <= Math.sqrt(n); i++){\n    if(__BLANK1__) return false;\n  }\n  return true;\n}\nconsole.log(isPrime(17))', ['true'], 'Check if n is divisible by i using modulo operator.', [{id:'BLANK1',prompt:'Check divisibility',choices:['n % i === 0','n / i === 0','n % i == 0','i % n === 0'],solution:'n % i === 0'}]);
+          case 5: return mk('Array Intersection', 'Find common elements in two arrays.', 'function intersection(arr1, arr2){\n  return arr1.filter(__BLANK1__);\n}\nconsole.log(intersection([1,2,3], [2,3,4]))', ['2','3'], 'Use filter with includes() to find elements that exist in both arrays.', [{id:'BLANK1',prompt:'Filter common elements',choices:['item => arr2.includes(item)','item => arr1.includes(item)','item => arr2.has(item)','item => arr2.indexOf(item)'],solution:'item => arr2.includes(item)'}]);
+          case 6: return mk('Binary Search', 'Find index of target in sorted array.', 'function binarySearch(arr, target){\n  let left = 0, right = arr.length - 1;\n  while(left <= right){\n    const mid = Math.floor((left + right) / 2);\n    if(arr[mid] === target) return mid;\n    if(arr[mid] < target) left = mid + 1;\n    else right = __BLANK1__;\n  }\n  return -1;\n}\nconsole.log(binarySearch([1,3,5,7,9], 5))', ['2'], 'When target is smaller, move right boundary to mid - 1.', [{id:'BLANK1',prompt:'Move right boundary',choices:['mid - 1','mid + 1','mid','left - 1'],solution:'mid - 1'}]);
+          case 7: return mk('Valid Parentheses', 'Check if parentheses are balanced.', 'function isValid(s){\n  const stack = [];\n  const pairs = {"(": ")", "[": "]", "{": "}"};\n  for(const char of s){\n    if(pairs[char]){\n      stack.push(__BLANK1__);\n    } else if(stack.length === 0 || stack.pop() !== char){\n      return false;\n    }\n  }\n  return stack.length === 0;\n}\nconsole.log(isValid("()[]{}"))', ['true'], 'Push the closing bracket for each opening bracket.', [{id:'BLANK1',prompt:'Push closing bracket',choices:['pairs[char]','char','pairs.char','pairs[char]'],solution:'pairs[char]'}]);
+          case 8: return mk('Two Sum', 'Find two numbers that add up to target.', 'function twoSum(nums, target){\n  const map = new Map();\n  for(let i = 0; i < nums.length; i++){\n    const complement = target - nums[i];\n    if(map.has(complement)){\n      return [map.get(complement), __BLANK1__];\n    }\n    map.set(nums[i], i);\n  }\n  return [];\n}\nconsole.log(twoSum([2,7,11,15], 9))', ['0','1'], 'Return the current index i as the second element.', [{id:'BLANK1',prompt:'Current index',choices:['i','nums[i]','complement','map.get(complement)'],solution:'i'}]);
+          case 9: return mk('Longest Common Prefix', 'Find longest common prefix.', 'function longestCommonPrefix(strs){\n  if(strs.length === 0) return "";\n  let prefix = strs[0];\n  for(let i = 1; i < strs.length; i++){\n    while(!strs[i].startsWith(prefix)){\n      prefix = prefix.substring(0, __BLANK1__);\n    }\n  }\n  return prefix;\n}\nconsole.log(longestCommonPrefix(["flower","flow","flight"]))', ['fl'], 'Remove last character from prefix using substring(0, length-1).', [{id:'BLANK1',prompt:'Remove last character',choices:['prefix.length - 1','prefix.length','prefix.length + 1','prefix.length - 2'],solution:'prefix.length - 1'}]);
+          default: return mk('Merge Sorted Arrays', 'Merge two sorted arrays.', 'function mergeSorted(arr1, arr2){\n  const result = [];\n  let i = 0, j = 0;\n  while(i < arr1.length && j < arr2.length){\n    if(arr1[i] <= arr2[j]){\n      result.push(arr1[i++]);\n    } else {\n      result.push(__BLANK1__);\n    }\n  }\n  return result.concat(arr1.slice(i)).concat(arr2.slice(j));\n}\nconsole.log(mergeSorted([1,3,5], [2,4,6]))', ['1','2','3','4','5','6'], 'Push the smaller element from arr2 and increment j.', [{id:'BLANK1',prompt:'Push from arr2',choices:['arr2[j++]','arr2[j]','arr2[i++]','arr1[j++]'],solution:'arr2[j++]'}]);
+        }
+      } else {
+        // ADVANCED PUZZLES (21-30) - Complex algorithms
+        switch (pat) {
+          case 1: return mk('Quick Sort', 'Implement quicksort algorithm.', 'function quickSort(arr){\n  if(arr.length <= 1) return arr;\n  const pivot = arr[Math.floor(arr.length / 2)];\n  const left = arr.filter(x => x < pivot);\n  const right = arr.filter(x => x > pivot);\n  const equal = arr.filter(x => x === pivot);\n  return __BLANK1__;\n}\nconsole.log(quickSort([3,6,8,10,1,2,1]))', ['1','1','2','3','6','8','10'], 'Concatenate recursive calls: [...left, ...equal, ...right].', [{id:'BLANK1',prompt:'Concatenate sorted parts',choices:['quickSort(left).concat(equal, quickSort(right))','quickSort(left).concat(quickSort(right))','left.concat(equal, right)','quickSort(left, equal, quickSort(right))'],solution:'quickSort(left).concat(equal, quickSort(right))'}]);
+          case 2: return mk('Dijkstra Algorithm', 'Find shortest path using Dijkstra.', 'function dijkstra(graph, start){\n  const distances = {};\n  const visited = new Set();\n  const pq = [[0, start]];\n  distances[start] = 0;\n  while(pq.length > 0){\n    const [dist, node] = pq.shift();\n    if(visited.has(node)) continue;\n    visited.add(node);\n    for(const [neighbor, weight] of graph[node] || []){\n      const newDist = dist + weight;\n      if(!distances[neighbor] || newDist < distances[neighbor]){\n        distances[neighbor] = __BLANK1__;\n        pq.push([newDist, neighbor]);\n      }\n    }\n  }\n  return distances;\n}\nconsole.log(dijkstra({A:[[B,1]], B:[[C,2]]}, "A"))', ['0','1','3'], 'Update distance to neighbor with the new calculated distance.', [{id:'BLANK1',prompt:'Update distance',choices:['newDist','dist','weight','dist + weight'],solution:'newDist'}]);
+          case 3: return mk('LRU Cache', 'Implement Least Recently Used cache.', 'class LRUCache{\n  constructor(capacity){\n    this.capacity = capacity;\n    this.cache = new Map();\n  }\n  get(key){\n    if(this.cache.has(key)){\n      const value = this.cache.get(key);\n      this.cache.delete(key);\n      this.cache.set(key, value);\n      return value;\n    }\n    return -1;\n  }\n  put(key, value){\n    if(this.cache.has(key)){\n      this.cache.delete(key);\n    } else if(this.cache.size >= this.capacity){\n      const firstKey = this.cache.keys().next().value;\n      this.cache.delete(__BLANK1__);\n    }\n    this.cache.set(key, value);\n  }\n}\nconst lru = new LRUCache(2);', ['2'], 'Delete the least recently used (first) key when cache is full.', [{id:'BLANK1',prompt:'Delete LRU key',choices:['firstKey','key','value','this.capacity'],solution:'firstKey'}]);
+          case 4: return mk('Trie Implementation', 'Implement a trie data structure.', 'class Trie{\n  constructor(){\n    this.root = {};\n  }\n  insert(word){\n    let node = this.root;\n    for(const char of word){\n      if(!node[char]) node[char] = {};\n      node = __BLANK1__;\n    }\n    node.isEnd = true;\n  }\n  search(word){\n    let node = this.root;\n    for(const char of word){\n      if(!node[char]) return false;\n      node = node[char];\n    }\n    return node.isEnd === true;\n  }\n}\nconst trie = new Trie();', ['true'], 'Move to the next node in the trie structure.', [{id:'BLANK1',prompt:'Move to next node',choices:['node[char]','node.char','char','node'],solution:'node[char]'}]);
+          case 5: return mk('Kadane Algorithm', 'Find maximum subarray sum.', 'function maxSubArray(nums){\n  let maxSoFar = nums[0];\n  let maxEndingHere = nums[0];\n  for(let i = 1; i < nums.length; i++){\n    maxEndingHere = Math.max(nums[i], __BLANK1__);\n    maxSoFar = Math.max(maxSoFar, maxEndingHere);\n  }\n  return maxSoFar;\n}\nconsole.log(maxSubArray([-2,1,-3,4,-1,2,1,-5,4]))', ['6'], 'Either start new subarray or extend existing one: maxEndingHere + nums[i].', [{id:'BLANK1',prompt:'Extend or start new',choices:['maxEndingHere + nums[i]','maxEndingHere','nums[i]','maxSoFar + nums[i]'],solution:'maxEndingHere + nums[i]'}]);
+          case 6: return mk('Floyd Cycle Detection', 'Detect cycle in linked list.', 'function hasCycle(head){\n  if(!head || !head.next) return false;\n  let slow = head;\n  let fast = head;\n  while(fast && fast.next){\n    slow = slow.next;\n    fast = __BLANK1__;\n    if(slow === fast) return true;\n  }\n  return false;\n}\nconsole.log(hasCycle({val:1, next:{val:2, next:null}}))', ['false'], 'Move fast pointer two steps ahead: fast.next.next.', [{id:'BLANK1',prompt:'Move fast pointer',choices:['fast.next.next','fast.next','slow.next','head.next'],solution:'fast.next.next'}]);
+          case 7: return mk('Edit Distance', 'Calculate minimum edit distance.', 'function minDistance(word1, word2){\n  const m = word1.length, n = word2.length;\n  const dp = Array(m+1).fill().map(() => Array(n+1).fill(0));\n  for(let i = 0; i <= m; i++) dp[i][0] = i;\n  for(let j = 0; j <= n; j++) dp[0][j] = j;\n  for(let i = 1; i <= m; i++){\n    for(let j = 1; j <= n; j++){\n      if(word1[i-1] === word2[j-1]){\n        dp[i][j] = dp[i-1][j-1];\n      } else {\n        dp[i][j] = 1 + Math.min(dp[i-1][j], dp[i][j-1], __BLANK1__);\n      }\n    }\n  }\n  return dp[m][n];\n}\nconsole.log(minDistance("horse", "ros"))', ['3'], 'Consider all three operations: delete, insert, replace (diagonal).', [{id:'BLANK1',prompt:'Replace operation',choices:['dp[i-1][j-1]','dp[i-1][j]','dp[i][j-1]','dp[i][j]'],solution:'dp[i-1][j-1]'}]);
+          case 8: return mk('Segment Tree', 'Implement range sum query.', 'class SegmentTree{\n  constructor(arr){\n    this.n = arr.length;\n    this.tree = new Array(4 * this.n).fill(0);\n    this.build(arr, 0, 0, this.n - 1);\n  }\n  build(arr, node, start, end){\n    if(start === end){\n      this.tree[node] = arr[start];\n    } else {\n      const mid = Math.floor((start + end) / 2);\n      this.build(arr, 2*node+1, start, mid);\n      this.build(arr, 2*node+2, mid+1, end);\n      this.tree[node] = __BLANK1__;\n    }\n  }\n  query(l, r){\n    return this.queryHelper(0, 0, this.n-1, l, r);\n  }\n}\nconst st = new SegmentTree([1,3,5,7,9]);', ['15'], 'Sum left and right children: tree[2*node+1] + tree[2*node+2].', [{id:'BLANK1',prompt:'Sum children',choices:['this.tree[2*node+1] + this.tree[2*node+2]','this.tree[node]','arr[start] + arr[end]','this.tree[2*node+1]'],solution:'this.tree[2*node+1] + this.tree[2*node+2]'}]);
+          case 9: return mk('Union Find', 'Implement disjoint set union.', 'class UnionFind{\n  constructor(n){\n    this.parent = Array(n).fill().map((_, i) => i);\n    this.rank = Array(n).fill(0);\n  }\n  find(x){\n    if(this.parent[x] !== x){\n      this.parent[x] = __BLANK1__;\n    }\n    return this.parent[x];\n  }\n  union(x, y){\n    const px = this.find(x), py = this.find(y);\n    if(px === py) return;\n    if(this.rank[px] < this.rank[py]){\n      this.parent[px] = py;\n    } else if(this.rank[px] > this.rank[py]){\n      this.parent[py] = px;\n    } else {\n      this.parent[py] = px;\n      this.rank[px]++;\n    }\n  }\n}\nconst uf = new UnionFind(5);', ['true'], 'Path compression: make parent point to root recursively.', [{id:'BLANK1',prompt:'Path compression',choices:['this.find(this.parent[x])','this.parent[x]','x','this.parent[this.parent[x]]'],solution:'this.find(this.parent[x])'}]);
+          default: return mk('Suffix Array', 'Build suffix array for string.', 'function buildSuffixArray(s){\n  const suffixes = [];\n  for(let i = 0; i < s.length; i++){\n    suffixes.push({index: i, suffix: s.substring(__BLANK1__)});\n  }\n  suffixes.sort((a, b) => a.suffix.localeCompare(b.suffix));\n  return suffixes.map(s => s.index);\n}\nconsole.log(buildSuffixArray("banana"))', ['0','1','2','3','4','5'], 'Create suffix starting from index i: s.substring(i).', [{id:'BLANK1',prompt:'Suffix from index',choices:['i','i+1','0','s.length'],solution:'i'}]);
+        }
       }
     }
     
@@ -265,10 +307,30 @@ const currentChallenge = getEnhancedChallenge();
           setIsCompleted(true);
           const completionTimeNow = Date.now();
           setCompletionTime(completionTimeNow);
+          // BULLETPROOF PUZZLE STAR CALCULATION
           const elapsedSeconds = startTime ? (completionTimeNow - startTime) / 1000 : Infinity;
-          let starCount = 1;
-          if (!showHint && !usedAnyPuzzleHint) starCount += 1;
-          if (elapsedSeconds <= 60) starCount += 1;
+          const hintWasUsed = showHint || usedAnyPuzzleHint || localStorage.getItem('arcane_used_hint') === '1';
+          let starCount = 1; // Base star for completion
+          
+          // Add star for no hint usage
+          if (!hintWasUsed) {
+            starCount += 1;
+          }
+          
+          // Add star for speed (under 60 seconds)
+          if (elapsedSeconds <= 60) {
+            starCount += 1;
+          }
+          
+          // Ensure minimum 1 star, maximum 3 stars
+          starCount = Math.max(1, Math.min(3, starCount));
+          
+          console.log(`⭐ BULLETPROOF Puzzle Star calculation:`);
+          console.log(`   - Base completion: 1 star`);
+          console.log(`   - No hint used: ${!hintWasUsed ? '+1' : '+0'} star`);
+          console.log(`   - Fast completion (${elapsedSeconds.toFixed(1)}s): ${elapsedSeconds <= 60 ? '+1' : '+0'} star`);
+          console.log(`   - Final: ${starCount} stars`);
+          
           setStars(starCount);
 
           // Save puzzle stars
@@ -336,39 +398,357 @@ const currentChallenge = getEnhancedChallenge();
 
       localStorage.setItem('arcane_errors', hasError ? '1' : '0');
 
-      // Main game flexible validation
-      // Pass if: 1) No errors, 2) Has output, 3) Output matches expected patterns
+      // Main game flexible validation - lesson-specific and lenient
       const passesPuzzle = (() => {
+        console.log('🔍 [CodeEditor] Validation Debug:', {
+          currentLevel,
+          hasError,
+          cleanedResult,
+          outLower: cleanedResult.toLowerCase()
+        });
+        
         // If there are errors, fail
         if (hasError) return false;
         
         // If no output at all, fail (unless it's a valid empty output scenario)
         if (!cleanedResult && currentLevel > 5) return false;
         
-        // Flexible success criteria:
+        // Flexible success criteria based on lesson content
         const outLower = cleanedResult.toLowerCase();
         
-        // For early lessons (1-10): check for specific keywords
-        if (currentLevel <= 10) {
-          return outLower.includes('coderealm') || 
-                 outLower.includes('hello') ||
-                 outLower.includes('welcome') ||
-                 cleanedResult.length > 0; // Any output is good for beginners
+        // Get lesson-specific validation based on current challenge
+        const lessonNum = Math.ceil(currentLevel / 3);
+        const levelStage = ((currentLevel - 1) % 3) + 1;
+        
+        // Lesson-specific validation patterns - properly categorized by difficulty
+        const getLessonValidation = (lesson: number, stage: number, language: string) => {
+          const patterns: Record<string, Record<number, Record<number, string[]>>> = {
+            python: {
+              // EASY LEVEL (1-20) - True Beginner Concepts
+              1: { 1: ['print', 'hello'], 2: ['print', 'hello'], 3: ['print', 'hello'] },
+              2: { 1: ['=', 'variable', 'f"'], 2: ['=', 'variable', 'f"'], 3: ['=', 'variable', 'f"'] },
+              3: { 1: ['def', 'function', 'return'], 2: ['def', 'function', 'return'], 3: ['def', 'function', 'return'] },
+              4: { 1: ['[', ']', 'list'], 2: ['[', ']', 'list'], 3: ['[', ']', 'list'] },
+              5: { 1: ['if', 'condition'], 2: ['if', 'condition'], 3: ['if', 'condition'] },
+              6: { 1: ['for', 'range'], 2: ['for', 'range'], 3: ['for', 'range'] },
+              7: { 1: ['string', 'upper', 'lower'], 2: ['string', 'upper', 'lower'], 3: ['string', 'upper', 'lower'] },
+              8: { 1: ['+', '-', '*', '/'], 2: ['+', '-', '*', '/'], 3: ['+', '-', '*', '/'] },
+              9: { 1: ['==', '!=', '>', '<'], 2: ['==', '!=', '>', '<'], 3: ['==', '!=', '>', '<'] },
+              10: { 1: ['+', 'concat'], 2: ['+', 'concat'], 3: ['+', 'concat'] },
+              11: { 1: ['input', 'user'], 2: ['input', 'user'], 3: ['input', 'user'] },
+              12: { 1: ['int', 'float', 'str'], 2: ['int', 'float', 'str'], 3: ['int', 'float', 'str'] },
+              13: { 1: ['bool', 'true', 'false'], 2: ['bool', 'true', 'false'], 3: ['bool', 'true', 'false'] },
+              14: { 1: ['and', 'or', 'not'], 2: ['and', 'or', 'not'], 3: ['and', 'or', 'not'] },
+              15: { 1: ['elif', 'multiple'], 2: ['elif', 'multiple'], 3: ['elif', 'multiple'] },
+              16: { 1: ['while', 'loop'], 2: ['while', 'loop'], 3: ['while', 'loop'] },
+              17: { 1: ['break', 'continue'], 2: ['break', 'continue'], 3: ['break', 'continue'] },
+              18: { 1: ['split', 'join'], 2: ['split', 'join'], 3: ['split', 'join'] },
+              19: { 1: ['format', 'f"'], 2: ['format', 'f"'], 3: ['format', 'f"'] },
+              20: { 1: ['len', 'count'], 2: ['len', 'count'], 3: ['len', 'count'] },
+              
+              // INTERMEDIATE LEVEL (21-40) - Building on Basics
+              21: { 1: ['def', 'parameter'], 2: ['def', 'parameter'], 3: ['def', 'parameter'] },
+              22: { 1: ['append', 'remove', 'insert'], 2: ['append', 'remove', 'insert'], 3: ['append', 'remove', 'insert'] },
+              23: { 1: ['if', 'else'], 2: ['if', 'else'], 3: ['if', 'else'] },
+              24: { 1: ['for', 'in', 'list'], 2: ['for', 'in', 'list'], 3: ['for', 'in', 'list'] },
+              25: { 1: ['dict', '{', '}', 'key'], 2: ['dict', '{', '}', 'key'], 3: ['dict', '{', '}', 'key'] },
+              26: { 1: ['tuple', '(', ')'], 2: ['tuple', '(', ')'], 3: ['tuple', '(', ')'] },
+              27: { 1: ['set', '{', '}', 'unique'], 2: ['set', '{', '}', 'unique'], 3: ['set', '{', '}', 'unique'] },
+              28: { 1: ['try', 'except'], 2: ['try', 'except'], 3: ['try', 'except'] },
+              29: { 1: ['lambda', 'anonymous'], 2: ['lambda', 'anonymous'], 3: ['lambda', 'anonymous'] },
+              30: { 1: ['comprehension', 'for', 'in'], 2: ['comprehension', 'for', 'in'], 3: ['comprehension', 'for', 'in'] },
+              31: { 1: ['import', 'module'], 2: ['import', 'module'], 3: ['import', 'module'] },
+              32: { 1: ['enumerate', 'zip'], 2: ['enumerate', 'zip'], 3: ['enumerate', 'zip'] },
+              33: { 1: ['map', 'filter'], 2: ['map', 'filter'], 3: ['map', 'filter'] },
+              34: { 1: ['sorted', 'reverse'], 2: ['sorted', 'reverse'], 3: ['sorted', 'reverse'] },
+              35: { 1: ['max', 'min', 'sum'], 2: ['max', 'min', 'sum'], 3: ['max', 'min', 'sum'] },
+              36: { 1: ['any', 'all'], 2: ['any', 'all'], 3: ['any', 'all'] },
+              37: { 1: ['isinstance', 'type'], 2: ['isinstance', 'type'], 3: ['isinstance', 'type'] },
+              38: { 1: ['hasattr', 'getattr'], 2: ['hasattr', 'getattr'], 3: ['hasattr', 'getattr'] },
+              39: { 1: ['globals', 'locals'], 2: ['globals', 'locals'], 3: ['globals', 'locals'] },
+              40: { 1: ['eval', 'exec'], 2: ['eval', 'exec'], 3: ['eval', 'exec'] },
+              
+              // ADVANCED LEVEL (41-50) - Complex Topics
+              41: { 1: ['class', 'object', 'self'], 2: ['class', 'object', 'self'], 3: ['class', 'object', 'self'] },
+              42: { 1: ['file', 'open', 'read', 'write'], 2: ['file', 'open', 'read', 'write'], 3: ['file', 'open', 'read', 'write'] },
+              43: { 1: ['inheritance', 'super'], 2: ['inheritance', 'super'], 3: ['inheritance', 'super'] },
+              44: { 1: ['polymorphism', 'override'], 2: ['polymorphism', 'override'], 3: ['polymorphism', 'override'] },
+              45: { 1: ['decorator', '@'], 2: ['decorator', '@'], 3: ['decorator', '@'] },
+              46: { 1: ['context', 'with', 'as'], 2: ['context', 'with', 'as'], 3: ['context', 'with', 'as'] },
+              47: { 1: ['generator', 'yield'], 2: ['generator', 'yield'], 3: ['generator', 'yield'] },
+              48: { 1: ['threading', 'thread'], 2: ['threading', 'thread'], 3: ['threading', 'thread'] },
+              49: { 1: ['asyncio', 'async', 'await'], 2: ['asyncio', 'async', 'await'], 3: ['asyncio', 'async', 'await'] },
+              50: { 1: ['metaclass', 'descriptor'], 2: ['metaclass', 'descriptor'], 3: ['metaclass', 'descriptor'] }
+            },
+            javascript: {
+              // EASY LEVEL (1-20) - True Beginner Concepts
+              1: { 1: ['console.log', 'hello'], 2: ['console.log', 'hello'], 3: ['console.log', 'hello'] },
+              2: { 1: ['const', 'let', 'var'], 2: ['const', 'let', 'var'], 3: ['const', 'let', 'var'] },
+              3: { 1: ['function', 'return'], 2: ['function', 'return'], 3: ['function', 'return'] },
+              4: { 1: ['[', ']', 'array'], 2: ['[', ']', 'array'], 3: ['[', ']', 'array'] },
+              5: { 1: ['if', 'condition'], 2: ['if', 'condition'], 3: ['if', 'condition'] },
+              6: { 1: ['for', 'loop'], 2: ['for', 'loop'], 3: ['for', 'loop'] },
+              7: { 1: ['string', 'toUpperCase', 'toLowerCase'], 2: ['string', 'toUpperCase', 'toLowerCase'], 3: ['string', 'toUpperCase', 'toLowerCase'] },
+              8: { 1: ['+', '-', '*', '/'], 2: ['+', '-', '*', '/'], 3: ['+', '-', '*', '/'] },
+              9: { 1: ['==', '===', '!=', '!=='], 2: ['==', '===', '!=', '!=='], 3: ['==', '===', '!=', '!=='] },
+              10: { 1: ['+', 'concat'], 2: ['+', 'concat'], 3: ['+', 'concat'] },
+              11: { 1: ['prompt', 'input'], 2: ['prompt', 'input'], 3: ['prompt', 'input'] },
+              12: { 1: ['Number', 'String', 'Boolean'], 2: ['Number', 'String', 'Boolean'], 3: ['Number', 'String', 'Boolean'] },
+              13: { 1: ['true', 'false'], 2: ['true', 'false'], 3: ['true', 'false'] },
+              14: { 1: ['&&', '||', '!'], 2: ['&&', '||', '!'], 3: ['&&', '||', '!'] },
+              15: { 1: ['else', 'if'], 2: ['else', 'if'], 3: ['else', 'if'] },
+              16: { 1: ['while', 'loop'], 2: ['while', 'loop'], 3: ['while', 'loop'] },
+              17: { 1: ['break', 'continue'], 2: ['break', 'continue'], 3: ['break', 'continue'] },
+              18: { 1: ['split', 'join'], 2: ['split', 'join'], 3: ['split', 'join'] },
+              19: { 1: ['template', 'literal'], 2: ['template', 'literal'], 3: ['template', 'literal'] },
+              20: { 1: ['length', 'indexOf'], 2: ['length', 'indexOf'], 3: ['length', 'indexOf'] },
+              
+              // INTERMEDIATE LEVEL (21-40) - Building on Basics
+              21: { 1: ['function', 'parameter'], 2: ['function', 'parameter'], 3: ['function', 'parameter'] },
+              22: { 1: ['push', 'pop', 'shift', 'unshift'], 2: ['push', 'pop', 'shift', 'unshift'], 3: ['push', 'pop', 'shift', 'unshift'] },
+              23: { 1: ['if', 'else'], 2: ['if', 'else'], 3: ['if', 'else'] },
+              24: { 1: ['for', 'in', 'of'], 2: ['for', 'in', 'of'], 3: ['for', 'in', 'of'] },
+              25: { 1: ['object', '{', '}', 'property'], 2: ['object', '{', '}', 'property'], 3: ['object', '{', '}', 'property'] },
+              26: { 1: ['null', 'undefined'], 2: ['null', 'undefined'], 3: ['null', 'undefined'] },
+              27: { 1: ['Set', 'Map'], 2: ['Set', 'Map'], 3: ['Set', 'Map'] },
+              28: { 1: ['try', 'catch'], 2: ['try', 'catch'], 3: ['try', 'catch'] },
+              29: { 1: ['arrow', '=>'], 2: ['arrow', '=>'], 3: ['arrow', '=>'] },
+              30: { 1: ['destructuring', 'spread'], 2: ['destructuring', 'spread'], 3: ['destructuring', 'spread'] },
+              31: { 1: ['import', 'export'], 2: ['import', 'export'], 3: ['import', 'export'] },
+              32: { 1: ['forEach', 'for'], 2: ['forEach', 'for'], 3: ['forEach', 'for'] },
+              33: { 1: ['map', 'filter', 'reduce'], 2: ['map', 'filter', 'reduce'], 3: ['map', 'filter', 'reduce'] },
+              34: { 1: ['sort', 'reverse'], 2: ['sort', 'reverse'], 3: ['sort', 'reverse'] },
+              35: { 1: ['Math.max', 'Math.min'], 2: ['Math.max', 'Math.min'], 3: ['Math.max', 'Math.min'] },
+              36: { 1: ['some', 'every'], 2: ['some', 'every'], 3: ['some', 'every'] },
+              37: { 1: ['typeof', 'instanceof'], 2: ['typeof', 'instanceof'], 3: ['typeof', 'instanceof'] },
+              38: { 1: ['hasOwnProperty', 'in'], 2: ['hasOwnProperty', 'in'], 3: ['hasOwnProperty', 'in'] },
+              39: { 1: ['global', 'window'], 2: ['global', 'window'], 3: ['global', 'window'] },
+              40: { 1: ['eval', 'Function'], 2: ['eval', 'Function'], 3: ['eval', 'Function'] },
+              
+              // ADVANCED LEVEL (41-50) - Complex Topics
+              41: { 1: ['class', 'constructor'], 2: ['class', 'constructor'], 3: ['class', 'constructor'] },
+              42: { 1: ['fetch', 'api'], 2: ['fetch', 'api'], 3: ['fetch', 'api'] },
+              43: { 1: ['extends', 'super'], 2: ['extends', 'super'], 3: ['extends', 'super'] },
+              44: { 1: ['polymorphism', 'override'], 2: ['polymorphism', 'override'], 3: ['polymorphism', 'override'] },
+              45: { 1: ['proxy', 'reflect'], 2: ['proxy', 'reflect'], 3: ['proxy', 'reflect'] },
+              46: { 1: ['symbol', 'iterator'], 2: ['symbol', 'iterator'], 3: ['symbol', 'iterator'] },
+              47: { 1: ['generator', 'yield'], 2: ['generator', 'yield'], 3: ['generator', 'yield'] },
+              48: { 1: ['WebWorker', 'thread'], 2: ['WebWorker', 'thread'], 3: ['WebWorker', 'thread'] },
+              49: { 1: ['async', 'await'], 2: ['async', 'await'], 3: ['async', 'await'] },
+              50: { 1: ['metaprogramming', 'decorator'], 2: ['metaprogramming', 'decorator'], 3: ['metaprogramming', 'decorator'] }
+            },
+            java: {
+              // EASY LEVEL (1-20) - True Beginner Concepts
+              1: { 1: ['System.out.println', 'hello'], 2: ['System.out.println', 'hello'], 3: ['System.out.println', 'hello'] },
+              2: { 1: ['String', 'int', 'double'], 2: ['String', 'int', 'double'], 3: ['String', 'int', 'double'] },
+              3: { 1: ['public', 'static', 'void', 'main'], 2: ['public', 'static', 'void', 'main'], 3: ['public', 'static', 'void', 'main'] },
+              4: { 1: ['[]', 'array'], 2: ['[]', 'array'], 3: ['[]', 'array'] },
+              5: { 1: ['if', 'condition'], 2: ['if', 'condition'], 3: ['if', 'condition'] },
+              6: { 1: ['for', 'loop'], 2: ['for', 'loop'], 3: ['for', 'loop'] },
+              7: { 1: ['String', 'charAt', 'length'], 2: ['String', 'charAt', 'length'], 3: ['String', 'charAt', 'length'] },
+              8: { 1: ['+', '-', '*', '/'], 2: ['+', '-', '*', '/'], 3: ['+', '-', '*', '/'] },
+              9: { 1: ['==', '!=', '>', '<'], 2: ['==', '!=', '>', '<'], 3: ['==', '!=', '>', '<'] },
+              10: { 1: ['+', 'concat'], 2: ['+', 'concat'], 3: ['+', 'concat'] },
+              11: { 1: ['Scanner', 'input'], 2: ['Scanner', 'input'], 3: ['Scanner', 'input'] },
+              12: { 1: ['Integer', 'Double', 'Boolean'], 2: ['Integer', 'Double', 'Boolean'], 3: ['Integer', 'Double', 'Boolean'] },
+              13: { 1: ['true', 'false'], 2: ['true', 'false'], 3: ['true', 'false'] },
+              14: { 1: ['&&', '||', '!'], 2: ['&&', '||', '!'], 3: ['&&', '||', '!'] },
+              15: { 1: ['else', 'if'], 2: ['else', 'if'], 3: ['else', 'if'] },
+              16: { 1: ['while', 'loop'], 2: ['while', 'loop'], 3: ['while', 'loop'] },
+              17: { 1: ['break', 'continue'], 2: ['break', 'continue'], 3: ['break', 'continue'] },
+              18: { 1: ['split', 'join'], 2: ['split', 'join'], 3: ['split', 'join'] },
+              19: { 1: ['String.format', 'printf'], 2: ['String.format', 'printf'], 3: ['String.format', 'printf'] },
+              20: { 1: ['length', 'indexOf'], 2: ['length', 'indexOf'], 3: ['length', 'indexOf'] },
+              
+              // INTERMEDIATE LEVEL (21-40) - Building on Basics
+              21: { 1: ['method', 'parameter'], 2: ['method', 'parameter'], 3: ['method', 'parameter'] },
+              22: { 1: ['ArrayList', 'add', 'remove'], 2: ['ArrayList', 'add', 'remove'], 3: ['ArrayList', 'add', 'remove'] },
+              23: { 1: ['if', 'else'], 2: ['if', 'else'], 3: ['if', 'else'] },
+              24: { 1: ['for', 'enhanced'], 2: ['for', 'enhanced'], 3: ['for', 'enhanced'] },
+              25: { 1: ['HashMap', 'Map'], 2: ['HashMap', 'Map'], 3: ['HashMap', 'Map'] },
+              26: { 1: ['null', 'Optional'], 2: ['null', 'Optional'], 3: ['null', 'Optional'] },
+              27: { 1: ['HashSet', 'TreeSet'], 2: ['HashSet', 'TreeSet'], 3: ['HashSet', 'TreeSet'] },
+              28: { 1: ['try', 'catch'], 2: ['try', 'catch'], 3: ['try', 'catch'] },
+              29: { 1: ['Lambda', '->'], 2: ['Lambda', '->'], 3: ['Lambda', '->'] },
+              30: { 1: ['Stream', 'forEach'], 2: ['Stream', 'forEach'], 3: ['Stream', 'forEach'] },
+              31: { 1: ['import', 'package'], 2: ['import', 'package'], 3: ['import', 'package'] },
+              32: { 1: ['Iterator', 'for'], 2: ['Iterator', 'for'], 3: ['Iterator', 'for'] },
+              33: { 1: ['Stream', 'map', 'filter'], 2: ['Stream', 'map', 'filter'], 3: ['Stream', 'map', 'filter'] },
+              34: { 1: ['Collections.sort', 'reverse'], 2: ['Collections.sort', 'reverse'], 3: ['Collections.sort', 'reverse'] },
+              35: { 1: ['Collections.max', 'Collections.min'], 2: ['Collections.max', 'Collections.min'], 3: ['Collections.max', 'Collections.min'] },
+              36: { 1: ['Stream.anyMatch', 'Stream.allMatch'], 2: ['Stream.anyMatch', 'Stream.allMatch'], 3: ['Stream.anyMatch', 'Stream.allMatch'] },
+              37: { 1: ['instanceof', 'getClass'], 2: ['instanceof', 'getClass'], 3: ['instanceof', 'getClass'] },
+              38: { 1: ['reflection', 'Field'], 2: ['reflection', 'Field'], 3: ['reflection', 'Field'] },
+              39: { 1: ['System', 'Properties'], 2: ['System', 'Properties'], 3: ['System', 'Properties'] },
+              40: { 1: ['ScriptEngine', 'eval'], 2: ['ScriptEngine', 'eval'], 3: ['ScriptEngine', 'eval'] },
+              
+              // ADVANCED LEVEL (41-50) - Complex Topics
+              41: { 1: ['class', 'object', 'new'], 2: ['class', 'object', 'new'], 3: ['class', 'object', 'new'] },
+              42: { 1: ['Socket', 'URL'], 2: ['Socket', 'URL'], 3: ['Socket', 'URL'] },
+              43: { 1: ['extends', 'inheritance'], 2: ['extends', 'inheritance'], 3: ['extends', 'inheritance'] },
+              44: { 1: ['implements', 'interface'], 2: ['implements', 'interface'], 3: ['implements', 'interface'] },
+              45: { 1: ['annotation', '@'], 2: ['annotation', '@'], 3: ['annotation', '@'] },
+              46: { 1: ['enum', 'enumeration'], 2: ['enum', 'enumeration'], 3: ['enum', 'enumeration'] },
+              47: { 1: ['generics', '<T>'], 2: ['generics', '<T>'], 3: ['generics', '<T>'] },
+              48: { 1: ['Thread', 'Runnable'], 2: ['Thread', 'Runnable'], 3: ['Thread', 'Runnable'] },
+              49: { 1: ['CompletableFuture', 'async'], 2: ['CompletableFuture', 'async'], 3: ['CompletableFuture', 'async'] },
+              50: { 1: ['reflection', 'metaprogramming'], 2: ['reflection', 'metaprogramming'], 3: ['reflection', 'metaprogramming'] }
+            }
+          };
+          
+          return patterns[language]?.[lesson]?.[stage] || ['output', 'result'];
+        };
+        
+        // For all lessons (1-150): use lesson-specific patterns
+        if (currentLevel <= 150) { // 50 lessons * 3 stages
+          const expectedPatterns = getLessonValidation(lessonNum, levelStage, selectedLanguage);
+          const hasExpectedPattern = expectedPatterns.some(pattern => 
+            outLower.includes(pattern.toLowerCase())
+          );
+          
+          // Additional lenient checks for specific lessons
+          let hasLenientPattern = false;
+          
+          // Python-specific lenient patterns
+          if (selectedLanguage === 'python') {
+            if (lessonNum === 3) {
+              // Functions lesson - accept numeric output or function keywords
+              hasLenientPattern = /\d/.test(cleanedResult) || 
+                                 outLower.includes('def') || 
+                                 outLower.includes('function') || 
+                                 outLower.includes('count') || 
+                                 outLower.includes('len');
+            } else if (lessonNum === 4) {
+              // Arrays/Lists lesson - accept list operations
+              hasLenientPattern = /\d/.test(cleanedResult) || 
+                                 outLower.includes('list') || 
+                                 outLower.includes('len') || 
+                                 outLower.includes('[') || 
+                                 outLower.includes(']');
+            } else if (lessonNum === 6) {
+              // Loops lesson - accept loop keywords or repeated output
+              hasLenientPattern = outLower.includes('for') || 
+                                 outLower.includes('while') || 
+                                 outLower.includes('range') ||
+                                 (cleanedResult.split('\n').length > 2); // Multiple lines of output
+            }
+          }
+          
+          // JavaScript-specific lenient patterns
+          if (selectedLanguage === 'javascript') {
+            if (lessonNum === 3) {
+              // Functions lesson - accept function keywords
+              hasLenientPattern = outLower.includes('function') || 
+                                 outLower.includes('return') ||
+                                 outLower.includes('()');
+            } else if (lessonNum === 4) {
+              // Arrays lesson - accept array operations
+              hasLenientPattern = /\d/.test(cleanedResult) || 
+                                 outLower.includes('array') || 
+                                 outLower.includes('length') || 
+                                 outLower.includes('[') || 
+                                 outLower.includes(']');
+            } else if (lessonNum === 6) {
+              // Loops lesson - accept loop keywords
+              hasLenientPattern = outLower.includes('for') || 
+                                 outLower.includes('while') ||
+                                 (cleanedResult.split('\n').length > 2);
+            }
+          }
+          
+          // Java-specific lenient patterns
+          if (selectedLanguage === 'java') {
+            if (lessonNum === 3) {
+              // Methods lesson - accept method keywords
+              hasLenientPattern = outLower.includes('public') || 
+                                 outLower.includes('static') || 
+                                 outLower.includes('return') ||
+                                 outLower.includes('method');
+            } else if (lessonNum === 4) {
+              // OOP lesson - accept class/object keywords
+              hasLenientPattern = outLower.includes('class') || 
+                                 outLower.includes('object') || 
+                                 outLower.includes('new') || 
+                                 outLower.includes('constructor');
+            } else if (lessonNum === 6) {
+              // Loops lesson - accept loop keywords
+              hasLenientPattern = outLower.includes('for') || 
+                                 outLower.includes('while') ||
+                                 (cleanedResult.split('\n').length > 2);
+            }
+          }
+          
+          // General lenient patterns for all languages
+          if (!hasLenientPattern) {
+            // Accept any meaningful output (not just comments or empty)
+            hasLenientPattern = cleanedResult.trim().length > 0 && 
+                               !cleanedResult.trim().startsWith('//') && 
+                               !cleanedResult.trim().startsWith('#') && 
+                               !cleanedResult.trim().startsWith('/*') &&
+                               !cleanedResult.trim().startsWith('*') &&
+                               /\S/.test(cleanedResult); // Contains non-whitespace
+          }
+          
+          const passesValidation = hasExpectedPattern || hasLenientPattern;
+          
+          console.log('🔍 [CodeEditor] Lesson-specific validation:', {
+            lessonNum,
+            levelStage,
+            selectedLanguage,
+            expectedPatterns,
+            hasExpectedPattern,
+            hasLenientPattern,
+            passesValidation,
+            output: cleanedResult
+          });
+          
+          return passesValidation;
         }
         
-        // For intermediate/advanced: just needs successful execution (no errors + has output)
-        return !hasError && cleanedResult.length > 0;
+        // For advanced lessons: needs meaningful output (not just comments)
+        const meaningfulOutput = cleanedResult.trim().length > 0 && 
+                                !cleanedResult.trim().startsWith('//') && 
+                                !cleanedResult.trim().startsWith('#') && 
+                                !cleanedResult.trim().startsWith('/*');
+        
+        console.log('🔍 [CodeEditor] Advanced lesson validation:', {
+          meaningfulOutput,
+          trimmedLength: cleanedResult.trim().length,
+          startsWithComment: cleanedResult.trim().startsWith('#')
+        });
+        
+        return !hasError && meaningfulOutput;
       })();
 
       if (passesPuzzle) {
+        console.log('🎉 [CodeEditor] Level completed! Setting isCompleted to true');
         setIsCompleted(true);
         const completionTimeNow = Date.now();
         setCompletionTime(completionTimeNow);
-        // Stars: 1 star for completion, +1 if no hint used (global or puzzle), +1 if finished within 60s
+        // BULLETPROOF STAR CALCULATION
         const elapsedSeconds = startTime ? (completionTimeNow - startTime) / 1000 : Infinity;
-        let starCount = 1;
-        if (!showHint && !usedAnyPuzzleHint) starCount += 1;
-        if (elapsedSeconds <= 60) starCount += 1;
+        const hintWasUsed = showHint || usedAnyPuzzleHint || localStorage.getItem('arcane_used_hint') === '1';
+        let starCount = 1; // Base star for completion
+        
+        // Add star for no hint usage
+        if (!hintWasUsed) {
+          starCount += 1;
+        }
+        
+        // Add star for speed (under 60 seconds)
+        if (elapsedSeconds <= 60) {
+          starCount += 1;
+        }
+        
+        // Ensure minimum 1 star, maximum 3 stars
+        starCount = Math.max(1, Math.min(3, starCount));
+        
+        console.log(`⭐ BULLETPROOF Star calculation:`);
+        console.log(`   - Base completion: 1 star`);
+        console.log(`   - No hint used: ${!hintWasUsed ? '+1' : '+0'} star`);
+        console.log(`   - Fast completion (${elapsedSeconds.toFixed(1)}s): ${elapsedSeconds <= 60 ? '+1' : '+0'} star`);
+        console.log(`   - Final: ${starCount} stars`);
+        
         setStars(starCount);
 
         // Persist stars for GameOverview display (separate keys for puzzles 1-30)
@@ -432,18 +812,27 @@ const currentChallenge = getEnhancedChallenge();
             
             // Use AI to determine which lessons to unlock (1-3 lessons based on performance)
             const prevUnlocked = JSON.parse(localStorage.getItem(unlockedKey) || '[1,2,3,4,5,6,7,8,9]') as number[];
-            const sessionData = {
-              language: selectedLanguage,
-              level: currentLevel,
-              attempts: attempts + 1,
-              timeTakenSeconds: (completionTimeNow - (startTime || Date.now())) / 1000,
-              usedHint: showHint || usedAnyPuzzleHint,
-              hadErrors: cleanedResult.includes('error'),
-              stars
-            };
-            const levelsToUnlock = unlockLessonsBasedOnPerformance(uid, selectedLanguage, currentLevel, sessionData);
+            // BULLETPROOF LEVEL PROGRESSION
+            const currentLesson = Math.ceil(currentLevel / 3);
+            const nextLesson = currentLesson + 1;
+            const nextLessonStart = (nextLesson - 1) * 3 + 1;
+            const nextLessonEnd = nextLesson * 3;
+            
+            // Always unlock the next lesson (3 levels)
+            const levelsToUnlock = [];
+            for (let level = nextLessonStart; level <= nextLessonEnd && level <= 150; level++) {
+              levelsToUnlock.push(level);
+            }
+            
+            // Merge with existing unlocked levels
             const newUnlocked = [...new Set([...prevUnlocked, ...levelsToUnlock])];
             localStorage.setItem(unlockedKey, JSON.stringify(newUnlocked));
+            
+            console.log(`🔓 BULLETPROOF Progression:`);
+            console.log(`   - Completed: Level ${currentLevel} (Lesson ${currentLesson})`);
+            console.log(`   - Unlocking: Lesson ${nextLesson} (Levels ${nextLessonStart}-${nextLessonEnd})`);
+            console.log(`   - Total unlocked: ${newUnlocked.length} levels`);
+            console.log(`   - Unlocked levels:`, newUnlocked.sort((a, b) => a - b));
           }
         }
 
@@ -452,17 +841,22 @@ const currentChallenge = getEnhancedChallenge();
           const completedKey = `${selectedLanguage}_completedLevels`;
           const unlockedKey = `${selectedLanguage}_unlockedLevels`;
           
-          // Use AI to determine which lessons to unlock (1-3 lessons based on performance)
-          const sessionData = {
-            language: selectedLanguage,
-            level: currentLevel,
-            attempts: attempts + 1,
-            timeTakenSeconds: (completionTimeNow - (startTime || Date.now())) / 1000,
-            usedHint: showHint || usedAnyPuzzleHint,
-            hadErrors: cleanedResult.includes('error'),
-            stars
-          };
-          const levelsToUnlock = unlockLessonsBasedOnPerformance(userId, selectedLanguage, currentLevel, sessionData);
+          // BULLETPROOF LEVEL PROGRESSION FOR AUTHENTICATED USERS
+          const currentLesson = Math.ceil(currentLevel / 3);
+          const nextLesson = currentLesson + 1;
+          const nextLessonStart = (nextLesson - 1) * 3 + 1;
+          const nextLessonEnd = nextLesson * 3;
+          
+          // Always unlock the next lesson (3 levels)
+          const levelsToUnlock = [];
+          for (let level = nextLessonStart; level <= nextLessonEnd && level <= 150; level++) {
+            levelsToUnlock.push(level);
+          }
+          
+          console.log(`🔓 BULLETPROOF Progression (Authenticated):`);
+          console.log(`   - Completed: Level ${currentLevel} (Lesson ${currentLesson})`);
+          console.log(`   - Unlocking: Lesson ${nextLesson} (Levels ${nextLessonStart}-${nextLessonEnd})`);
+          console.log(`   - Levels to unlock:`, levelsToUnlock);
           
           // Merge arrays in Firestore: we save last-completed and AI-recommended unlocks
             await savePlayerProgress(userId, { 
@@ -574,8 +968,421 @@ const currentChallenge = getEnhancedChallenge();
   // removed legacy calculateStars usage
 
   const toggleHint = () => {
-    setShowHint(!showHint);
-    localStorage.setItem('arcane_used_hint', showHint ? '0' : '1');
+    const newShowHint = !showHint;
+    setShowHint(newShowHint);
+    
+    if (!newShowHint) {
+      // When hiding hint, also hide detailed help
+      setShowDetailedHelp(false);
+    }
+    
+    // BULLETPROOF HINT TRACKING
+    if (newShowHint) {
+      // Hint is being shown - mark as used
+      localStorage.setItem('arcane_used_hint', '1');
+      console.log('🔍 Hint was SHOWN - will deduct 1 star');
+    } else {
+      // Hint is being hidden - keep the used flag (don't reset it)
+      console.log('🔍 Hint was HIDDEN - star deduction remains');
+    }
+  };
+
+  const toggleDetailedHelp = () => {
+    setShowDetailedHelp(!showDetailedHelp);
+  };
+
+  const getLevelSpecificHint = () => {
+    const lessonNum = Math.floor((currentLevel - 1) / 3) + 1;
+    const stage = ((currentLevel - 1) % 3) + 1;
+    
+    if (lessonNum === 1) {
+      if (stage === 1) {
+        return selectedLanguage === 'javascript' ? 
+          'Start with console.log("Hello, CodeRealm!"); - remember to use quotes around the text and end with a semicolon.' :
+          selectedLanguage === 'python' ? 
+          'Start with print("Hello, CodeRealm!") - remember to use quotes around the text.' :
+          'Start with System.out.println("Hello, CodeRealm!"); - remember to use quotes around the text and end with a semicolon.';
+      } else if (stage === 2) {
+        return selectedLanguage === 'javascript' ? 
+          'Create a function: function greet() { return "Welcome to CodeRealm!"; } then call it with console.log(greet());' :
+          selectedLanguage === 'python' ? 
+          'Create a function: def greet(): return "Welcome to CodeRealm!" then call it with print(greet())' :
+          'Create a method: public static String greet() { return "Welcome to CodeRealm!"; } then call it with System.out.println(greet());';
+      } else {
+        return selectedLanguage === 'javascript' ? 
+          'Use a for loop: for(let i = 0; i < 3; i++) { console.log("CodeRealm"); }' :
+          selectedLanguage === 'python' ? 
+          'Use a for loop: for i in range(3): print("CodeRealm")' :
+          'Use a for loop: for(int i = 0; i < 3; i++) { System.out.println("CodeRealm"); }';
+      }
+    } else if (lessonNum === 2) {
+      if (stage === 1) {
+        return selectedLanguage === 'javascript' ? 
+          'Create a variable: const heroName = "YourName"; - replace "YourName" with your actual name.' :
+          selectedLanguage === 'python' ? 
+          'Create a variable: hero_name = "YourName" - replace "YourName" with your actual name.' :
+          'Create a variable: String heroName = "YourName"; - replace "YourName" with your actual name.';
+      } else if (stage === 2) {
+        return selectedLanguage === 'javascript' ? 
+          'Create a variable for age: const age = 25; then use template literals: console.log(`I am ${age} years old`);' :
+          selectedLanguage === 'python' ? 
+          'Create a variable for age: age = 25 then use f-strings: print(f"I am {age} years old")' :
+          'Create a variable for age: int age = 25; then use concatenation: System.out.println("I am " + age + " years old");';
+      } else {
+        return selectedLanguage === 'javascript' ? 
+          'Create variables for name, age, and quest, then combine them: console.log(`Name: ${name}, Age: ${age}, Quest: ${quest}`);' :
+          selectedLanguage === 'python' ? 
+          'Create variables for name, age, and quest, then combine them: print(f"Name: {name}, Age: {age}, Quest: {quest}")' :
+          'Create variables for name, age, and quest, then combine them: System.out.println("Name: " + name + ", Age: " + age + ", Quest: " + quest);';
+      }
+    } else if (lessonNum >= 21) {
+      if (stage === 1) {
+        return selectedLanguage === 'javascript' ? 
+          'Create an object: const hero = { name: "Hero", level: 5, health: 100 }; - remember to use commas between properties.' :
+          selectedLanguage === 'python' ? 
+          'Create a dictionary: hero = {"name": "Hero", "level": 5, "health": 100} - remember to use commas between items.' :
+          'Create a class: public class Hero { private String name; private int level; private int health; } - remember to add a constructor.';
+      } else if (stage === 2) {
+        return selectedLanguage === 'javascript' ? 
+          'Access properties: hero.name = "NewName"; hero.level = 10; then display: console.log(hero);' :
+          selectedLanguage === 'python' ? 
+          'Access values: hero["name"] = "NewName"; hero["level"] = 10; then display: print(hero)' :
+          'Create getter/setter methods: public String getName() { return name; } public void setName(String name) { this.name = name; }';
+      } else {
+        return selectedLanguage === 'javascript' ? 
+          'Add a method: hero.greet = function() { return "Hello, I am " + this.name; }; then call: console.log(hero.greet());' :
+          selectedLanguage === 'python' ? 
+          'Create a class with methods: class Hero: def greet(self): return f"Hello, I am {self.name}"' :
+          'Add methods to class: public String greet() { return "Hello, I am " + name; } then call: System.out.println(hero.greet());';
+      }
+    } else {
+      // Generate hints for other lessons based on lesson number
+      if (lessonNum >= 3 && lessonNum <= 20) {
+        // Basic lessons (3-20)
+        if (stage === 1) {
+          return selectedLanguage === 'javascript' ? 
+            'Start with the basics you\'ve learned. Use console.log() for output and proper syntax.' :
+            selectedLanguage === 'python' ? 
+            'Start with the basics you\'ve learned. Use print() for output and proper syntax.' :
+            'Start with the basics you\'ve learned. Use System.out.println() for output and proper syntax.';
+        } else if (stage === 2) {
+          return selectedLanguage === 'javascript' ? 
+            'Practice what you\'ve learned. Use functions, variables, and proper JavaScript syntax.' :
+            selectedLanguage === 'python' ? 
+            'Practice what you\'ve learned. Use functions, variables, and proper Python syntax.' :
+            'Practice what you\'ve learned. Use methods, variables, and proper Java syntax.';
+        } else {
+          return selectedLanguage === 'javascript' ? 
+            'Master the concepts. Combine functions, variables, and objects in your solution.' :
+            selectedLanguage === 'python' ? 
+            'Master the concepts. Combine functions, variables, and dictionaries in your solution.' :
+            'Master the concepts. Combine methods, variables, and classes in your solution.';
+        }
+      } else if (lessonNum >= 22 && lessonNum <= 40) {
+        // Intermediate lessons (22-40)
+        if (stage === 1) {
+          return selectedLanguage === 'javascript' ? 
+            'Use intermediate concepts. Work with objects, arrays, and advanced functions.' :
+            selectedLanguage === 'python' ? 
+            'Use intermediate concepts. Work with classes, lists, and advanced functions.' :
+            'Use intermediate concepts. Work with classes, arrays, and advanced methods.';
+        } else if (stage === 2) {
+          return selectedLanguage === 'javascript' ? 
+            'Practice intermediate concepts. Use arrow functions, array methods, and object manipulation.' :
+            selectedLanguage === 'python' ? 
+            'Practice intermediate concepts. Use lambda functions, list comprehensions, and class methods.' :
+            'Practice intermediate concepts. Use lambda expressions, streams, and advanced class features.';
+        } else {
+          return selectedLanguage === 'javascript' ? 
+            'Master intermediate concepts. Combine objects, arrays, functions, and modern JavaScript features.' :
+            selectedLanguage === 'python' ? 
+            'Master intermediate concepts. Combine classes, lists, functions, and Pythonic features.' :
+            'Master intermediate concepts. Combine classes, arrays, methods, and modern Java features.';
+        }
+      } else if (lessonNum >= 42 && lessonNum <= 50) {
+        // Advanced lessons (42-50)
+        if (stage === 1) {
+          return selectedLanguage === 'javascript' ? 
+            'Use advanced concepts. Work with async/await, modules, and complex data structures.' :
+            selectedLanguage === 'python' ? 
+            'Use advanced concepts. Work with async/await, modules, and complex data structures.' :
+            'Use advanced concepts. Work with multithreading, packages, and complex data structures.';
+        } else if (stage === 2) {
+          return selectedLanguage === 'javascript' ? 
+            'Practice advanced concepts. Use Promises, error handling, and performance optimization.' :
+            selectedLanguage === 'python' ? 
+            'Practice advanced concepts. Use asyncio, exception handling, and performance optimization.' :
+            'Practice advanced concepts. Use CompletableFuture, exception handling, and performance optimization.';
+        } else {
+          return selectedLanguage === 'javascript' ? 
+            'Master advanced concepts. Combine all JavaScript features for production-ready code.' :
+            selectedLanguage === 'python' ? 
+            'Master advanced concepts. Combine all Python features for production-ready code.' :
+            'Master advanced concepts. Combine all Java features for production-ready code.';
+        }
+      } else {
+        // Fallback for any other lessons
+        return selectedLanguage === 'javascript' ? 
+          'Apply your JavaScript knowledge to solve this challenge. Use proper syntax and best practices.' :
+          selectedLanguage === 'python' ? 
+          'Apply your Python knowledge to solve this challenge. Use proper syntax and best practices.' :
+          'Apply your Java knowledge to solve this challenge. Use proper syntax and best practices.';
+      }
+    }
+  };
+
+  const getDetailedHelpContent = () => {
+    const challenge = isPuzzleSession && puzzleIndex ? getGeneratedPuzzle(selectedLanguage, puzzleIndex) : currentChallenge;
+    const lessonNum = Math.floor((currentLevel - 1) / 3) + 1;
+    
+    // Generate lesson-specific content based on the current lesson
+    if (lessonNum === 1) {
+      // Function lessons
+      if (selectedLanguage === 'javascript') {
+        return {
+          syntax: `Functions: function greet() { return "Hello"; }
+Variables: const name = "Hero"; let age = 25;
+Objects: const hero = { name: "Knight", level: 5 };
+Arrays: const items = ["sword", "shield", "potion"];`,
+          solution: `Solution:
+function greet() {
+    return "Welcome to CodeRealm!";
+}
+
+console.log(greet());
+
+Explanation:
+${getLevelSpecificHint()}`
+        };
+      } else if (selectedLanguage === 'python') {
+        return {
+          syntax: `Functions: def greet(): return "Hello"
+Variables: name = "Hero"; age = 25
+Dictionaries: hero = {"name": "Sage", "level": 5}
+Lists: items = ["sword", "shield", "potion"]`,
+          solution: `Solution:
+def greet():
+    return "Welcome to CodeRealm!"
+
+print(greet())
+
+Explanation:
+${getLevelSpecificHint()}`
+        };
+      } else { // Java
+        return {
+          syntax: `Methods: public static String greet() { return "Hello"; }
+Variables: String name = "Hero"; int age = 25;
+Classes: public class Hero { private String name; }
+Arrays: String[] items = {"sword", "shield", "potion"};`,
+          solution: `Solution:
+public class Main {
+    public static String greet() {
+        return "Welcome to CodeRealm!";
+    }
+    
+    public static void main(String[] args) {
+        System.out.println(greet());
+    }
+}
+
+Explanation:
+${getLevelSpecificHint()}`
+        };
+      }
+    } else if (lessonNum === 2) {
+      // Variable lessons
+      if (selectedLanguage === 'javascript') {
+        return {
+          syntax: `Variables: const name = "Hero"; let age = 25;
+Functions: function greet(name) { return "Hello, " + name; }
+Objects: const hero = { name: "Knight", level: 5 };
+Arrays: const items = ["sword", "shield", "potion"];`,
+          solution: `Solution:
+const heroName = "Hero";
+console.log("Welcome to CodeRealm, " + heroName + "!");
+
+Explanation:
+${getLevelSpecificHint()}`
+        };
+      } else if (selectedLanguage === 'python') {
+        return {
+          syntax: `Variables: name = "Hero"; age = 25
+Functions: def greet(name): return f"Hello, {name}"
+Dictionaries: hero = {"name": "Sage", "level": 5}
+Lists: items = ["sword", "shield", "potion"]`,
+          solution: `Solution:
+hero_name = "Hero"
+print(f"Welcome to CodeRealm, {hero_name}!")
+
+Explanation:
+${getLevelSpecificHint()}`
+        };
+      } else { // Java
+        return {
+          syntax: `Variables: String name = "Hero"; int age = 25;
+Methods: public static String greet(String name) { return "Hello, " + name; }
+Classes: public class Hero { private String name; }
+Arrays: String[] items = {"sword", "shield", "potion"};`,
+          solution: `Solution:
+String heroName = "Hero";
+System.out.println("Welcome to CodeRealm, " + heroName + "!");
+
+Explanation:
+${getLevelSpecificHint()}`
+        };
+      }
+    } else if (lessonNum >= 21) {
+      // Object/Class lessons
+      if (selectedLanguage === 'javascript') {
+        return {
+          syntax: `Objects: const hero = { name: "Knight", level: 5 };
+Functions: function greet(name) { return "Hello, " + name; }
+Variables: const name = "Hero"; let age = 25;
+Arrays: const items = ["sword", "shield", "potion"];`,
+          solution: `Solution:
+const hero = {
+    name: "Hero",
+    level: 5,
+    health: 100
+};
+
+console.log(hero);
+
+Explanation:
+${getLevelSpecificHint()}`
+        };
+      } else if (selectedLanguage === 'python') {
+        return {
+          syntax: `Dictionaries: hero = {"name": "Sage", "level": 5}
+Functions: def greet(name): return f"Hello, {name}"
+Variables: name = "Hero"; age = 25
+Lists: items = ["sword", "shield", "potion"]`,
+          solution: `Solution:
+hero = {
+    "name": "Hero",
+    "level": 5,
+    "health": 100
+}
+
+print(hero)
+
+Explanation:
+${getLevelSpecificHint()}`
+        };
+      } else { // Java
+        return {
+          syntax: `Classes: public class Hero { private String name; }
+Methods: public static String greet(String name) { return "Hello, " + name; }
+Variables: String name = "Hero"; int age = 25;
+Arrays: String[] items = {"sword", "shield", "potion"};`,
+          solution: `Solution:
+public class Hero {
+    private String name;
+    private int level;
+    private int health;
+    
+    public Hero(String name, int level, int health) {
+        this.name = name;
+        this.level = level;
+        this.health = health;
+    }
+    
+    public static void main(String[] args) {
+        Hero hero = new Hero("Hero", 5, 100);
+        System.out.println(hero.name);
+    }
+}
+
+Explanation:
+${getLevelSpecificHint()}`
+        };
+      }
+    } else {
+      // Default for other lessons
+      if (selectedLanguage === 'javascript') {
+        return {
+          syntax: `Variables: const name = "Hero"; let age = 25;
+Functions: function greet(name) { return "Hello, " + name; }
+Objects: const hero = { name: "Knight", level: 5 };
+Arrays: const items = ["sword", "shield", "potion"];`,
+          solution: `Solution:
+${(challenge as any).solution || 'Solution not available for this puzzle type'}
+
+Explanation:
+${getLevelSpecificHint()}`
+        };
+      } else if (selectedLanguage === 'python') {
+        return {
+          syntax: `Variables: name = "Hero"; age = 25
+Functions: def greet(name): return f"Hello, {name}"
+Dictionaries: hero = {"name": "Sage", "level": 5}
+Lists: items = ["sword", "shield", "potion"]`,
+          solution: `Solution:
+${(challenge as any).solution || 'Solution not available for this puzzle type'}
+
+Explanation:
+${getLevelSpecificHint()}`
+        };
+      } else { // Java
+        return {
+          syntax: `Variables: String name = "Hero"; int age = 25;
+Methods: public static String greet(String name) { return "Hello, " + name; }
+Classes: public class Hero { private String name; }
+Arrays: String[] items = {"sword", "shield", "potion"};`,
+          solution: `Solution:
+${(challenge as any).solution || 'Solution not available for this puzzle type'}
+
+Explanation:
+${getLevelSpecificHint()}`
+        };
+      }
+    }
+  };
+
+  const getImmersiveTitle = () => {
+    if (isPuzzleSession && puzzleIndex) {
+      return getGeneratedPuzzle(selectedLanguage, puzzleIndex).title;
+    }
+    
+    const lessonNum = Math.floor((currentLevel - 1) / 3) + 1;
+    const stage = ((currentLevel - 1) % 3) + 1;
+    
+    // Generate immersive titles based on lesson progression
+    if (lessonNum === 1) {
+      if (stage === 1) {
+        return selectedLanguage === 'javascript' ? 'The Awakening - Introduction' : selectedLanguage === 'python' ? 'The Awakening - Introduction' : 'The Awakening - Introduction';
+      } else if (stage === 2) {
+        return selectedLanguage === 'javascript' ? 'The Oracle\'s Challenge - Practice' : selectedLanguage === 'python' ? 'The Sage\'s Challenge - Practice' : 'The Oracle\'s Challenge - Practice';
+      } else {
+        return selectedLanguage === 'javascript' ? 'The Oracle\'s Mastery - Advanced' : selectedLanguage === 'python' ? 'The Sage\'s Mastery - Advanced' : 'The Oracle\'s Mastery - Advanced';
+      }
+    } else if (lessonNum === 2) {
+      if (stage === 1) {
+        return selectedLanguage === 'javascript' ? 'The Variable Realm - Introduction' : selectedLanguage === 'python' ? 'The Variable Sanctum - Introduction' : 'The Variable Kingdom - Introduction';
+      } else if (stage === 2) {
+        return selectedLanguage === 'javascript' ? 'The Variable Realm - Practice' : selectedLanguage === 'python' ? 'The Variable Sanctum - Practice' : 'The Variable Kingdom - Practice';
+      } else {
+        return selectedLanguage === 'javascript' ? 'The Variable Realm - Mastery' : selectedLanguage === 'python' ? 'The Variable Sanctum - Mastery' : 'The Variable Kingdom - Mastery';
+      }
+    } else if (lessonNum >= 21) {
+      if (stage === 1) {
+        return selectedLanguage === 'javascript' ? 'The Object Realm - Introduction' : selectedLanguage === 'python' ? 'The Dictionary Sanctum - Introduction' : 'The Class Kingdom - Introduction';
+      } else if (stage === 2) {
+        return selectedLanguage === 'javascript' ? 'The Object Realm - Practice' : selectedLanguage === 'python' ? 'The Dictionary Sanctum - Practice' : 'The Class Kingdom - Practice';
+      } else {
+        return selectedLanguage === 'javascript' ? 'The Object Realm - Mastery' : selectedLanguage === 'python' ? 'The Dictionary Sanctum - Mastery' : 'The Class Kingdom - Mastery';
+      }
+    } else {
+      // Default titles for other lessons
+      if (stage === 1) {
+        return selectedLanguage === 'javascript' ? `The JavaScript Realm - Lesson ${lessonNum}` : selectedLanguage === 'python' ? `The Python Sanctum - Lesson ${lessonNum}` : `The Java Kingdom - Lesson ${lessonNum}`;
+      } else if (stage === 2) {
+        return selectedLanguage === 'javascript' ? `The JavaScript Realm - Practice ${lessonNum}` : selectedLanguage === 'python' ? `The Python Sanctum - Practice ${lessonNum}` : `The Java Kingdom - Practice ${lessonNum}`;
+      } else {
+        return selectedLanguage === 'javascript' ? `The JavaScript Realm - Mastery ${lessonNum}` : selectedLanguage === 'python' ? `The Python Sanctum - Mastery ${lessonNum}` : `The Java Kingdom - Mastery ${lessonNum}`;
+      }
+    }
   };
 
   const getLanguageColor = () => {
@@ -715,6 +1522,7 @@ const currentChallenge = getEnhancedChallenge();
 
   const tutorial = getTutorialContent();
   const currentTutorialStep = tutorial.steps[tutorialStep];
+
 
   return (
     <div className="pt-16 min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
@@ -887,7 +1695,7 @@ const currentChallenge = getEnhancedChallenge();
               className="text-cyan-400 hover:text-cyan-300 flex items-center space-x-2 bg-cyan-400/10 px-4 py-2 rounded-lg border border-cyan-400/20 hover:bg-cyan-400/20 transition-all duration-300"
             >
               <ArrowLeft className="h-5 w-5" />
-              <span>Back to Overview</span>
+              <span>Back to Lesson Select</span>
             </button>
             <button
               onClick={() => {
@@ -934,41 +1742,87 @@ const currentChallenge = getEnhancedChallenge();
         </div>
 
         {/* Challenge Story + Editor */}
-        <div className="grid lg:grid-cols-2 gap-8">
-          <div className="space-y-6">
+        <div className="grid lg:grid-cols-2 gap-6">
+          <div className="space-y-4">
             {/* Story Card */}
-            <div className="bg-gradient-to-br from-purple-900/40 to-cyan-900/30 p-6 rounded-2xl border border-purple-500/30 backdrop-blur-sm">
-              <h2 className="text-xl font-bold text-cyan-400 mb-4 flex items-center space-x-2">
+            <div className="bg-gradient-to-br from-purple-900/40 to-cyan-900/30 p-4 rounded-2xl border border-purple-500/30 backdrop-blur-sm">
+              <h2 className="text-lg font-bold text-cyan-400 mb-3 flex items-center space-x-2">
                 <span>📖</span>
                 <span>Story</span>
               </h2>
-              <p className="text-gray-300 italic leading-relaxed">{isPuzzleSession && puzzleIndex ? getGeneratedPuzzle(selectedLanguage, puzzleIndex).story : currentChallenge.story}</p>
+              <div className="text-gray-300 leading-relaxed whitespace-pre-line text-sm">{isPuzzleSession && puzzleIndex ? getGeneratedPuzzle(selectedLanguage, puzzleIndex).story : currentChallenge.story}</div>
             </div>
             
-            {/* Challenge Card */}
-            <div className="bg-gradient-to-br from-slate-800/60 to-slate-900/60 p-6 rounded-2xl border border-purple-500/30 backdrop-blur-sm">
-              <h2 className="text-xl font-bold text-white mb-4 flex items-center space-x-2">
+            {/* Challenge & Objectives Card */}
+            <div className="bg-gradient-to-br from-slate-800/60 to-slate-900/60 p-4 rounded-2xl border border-purple-500/30 backdrop-blur-sm">
+              <h2 className="text-lg font-bold text-white mb-3 flex items-center space-x-2">
                 <span>🎯</span>
-                <span>{isPuzzleSession && puzzleIndex ? getGeneratedPuzzle(selectedLanguage, puzzleIndex).title : currentChallenge.title}</span>
+                <span>{getImmersiveTitle()}</span>
               </h2>
-              <p className="text-gray-300 leading-relaxed">{isPuzzleSession && puzzleIndex ? getGeneratedPuzzle(selectedLanguage, puzzleIndex).description : currentChallenge.description}</p>
+              <div className="space-y-2">
+                <h3 className="text-green-400 font-semibold text-sm">Your Quest:</h3>
+                <div className="space-y-1">
+                  <div className="flex items-start space-x-2">
+                    <span className="text-green-400 font-bold text-xs">•</span>
+                    <p className="text-gray-300 text-xs">
+                      {isPuzzleSession && puzzleIndex ? 
+                        `Complete the puzzle by filling in the missing code pieces` : 
+                        currentChallenge.description
+                      }
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
             
             {/* Hint Card - Available for both main game and puzzles */}
-            <div className="bg-gradient-to-br from-yellow-900/30 to-orange-900/30 p-6 rounded-2xl border border-yellow-500/30 backdrop-blur-sm">
-                <div className="flex justify-between items-center mb-4">
+            <div className="bg-gradient-to-br from-yellow-900/30 to-orange-900/30 p-4 rounded-2xl border border-yellow-500/30 backdrop-blur-sm">
+                <div className="flex justify-between items-center mb-3">
                 <h3 className="text-lg font-bold text-yellow-400 flex items-center space-x-2">
                   <span>💡</span>
                   <span>Need a Hint?</span>
                 </h3>
                   <button
                   onClick={toggleHint}
-                  className="bg-yellow-500/20 hover:bg-yellow-500/30 px-3 py-1 rounded-lg text-yellow-300 transition-colors"
+                    className="bg-yellow-500/20 hover:bg-yellow-500/30 px-3 py-1 rounded-lg text-yellow-300 transition-colors text-sm"
                 >
                   {showHint ? 'Hide' : 'Show'} Hint
                 </button>
               </div>
-              {showHint && <p className="text-yellow-200 leading-relaxed">{isPuzzleSession && puzzleIndex ? getGeneratedPuzzle(selectedLanguage, puzzleIndex).hint : currentChallenge.hint}</p>}
+              
+              {showHint && (
+                <div className="mb-3">
+                  <p className="text-yellow-200 leading-relaxed text-sm">
+                    {getLevelSpecificHint()}
+                  </p>
+                  <div className="mt-2">
+                    <button
+                      onClick={toggleDetailedHelp}
+                      className="bg-blue-500/20 hover:bg-blue-500/30 px-3 py-1 rounded-lg text-blue-300 transition-colors text-xs"
+                    >
+                      {showDetailedHelp ? 'Hide' : 'Need More Help?'}
+                    </button>
+                  </div>
+                </div>
+              )}
+              
+              {showDetailedHelp && (
+                <div className="space-y-2">
+                  <div className="bg-slate-800/50 p-3 rounded-lg border border-blue-500/30">
+                    <h4 className="text-blue-300 font-semibold mb-1 text-sm">Syntax Guide</h4>
+                    <div className="text-gray-300 text-xs leading-relaxed whitespace-pre-line">
+                      {getDetailedHelpContent().syntax}
+                    </div>
+                  </div>
+                  
+                  <div className="bg-slate-800/50 p-3 rounded-lg border border-purple-500/30">
+                    <h4 className="text-purple-300 font-semibold mb-1 text-sm">Solution & Explanation</h4>
+                    <div className="text-gray-300 text-xs leading-relaxed whitespace-pre-line">
+                      {getDetailedHelpContent().solution}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -994,7 +1848,7 @@ const currentChallenge = getEnhancedChallenge();
                   value={code}
                   onChange={handleTextAreaChange}
                   onKeyDown={insertTab}
-                  className="w-full h-80 bg-slate-800/50 text-white font-mono text-sm p-4 resize-none focus:outline-none focus:ring-2 focus:ring-cyan-400/50 rounded-b-2xl"
+                  className="w-full h-64 bg-slate-800/50 text-white font-mono text-sm p-4 resize-none focus:outline-none focus:ring-2 focus:ring-cyan-400/50 rounded-b-2xl"
                   placeholder="Write your code here..."
                   spellCheck={false}
                 />
@@ -1069,13 +1923,17 @@ const currentChallenge = getEnhancedChallenge();
                 </div>
               <div className="flex space-x-4">
                 <button
-                  onClick={() => setIsCompleted(false)}
+                  onClick={() => {
+                    console.log('🔍 [CodeEditor] Review Code clicked, setting isCompleted to false');
+                    setIsCompleted(false);
+                  }}
                   className="flex-1 bg-purple-500 hover:bg-purple-600 px-4 py-3 rounded-lg font-semibold transition-all duration-300"
                 >
                   Review Code
                 </button>
                 <button
                   onClick={() => {
+                    console.log('🔍 [CodeEditor] Next Level clicked, currentLevel:', currentLevel);
                     if (isPuzzleSession && puzzleIndex) {
                       if (puzzleIndex < 30) {
                         setPuzzleIndex(puzzleIndex + 1);

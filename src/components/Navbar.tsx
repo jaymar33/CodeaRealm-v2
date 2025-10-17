@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Code2, Home, Info, Gamepad2, Cpu, Sparkles, LogOut, LogIn, User, Star } from 'lucide-react';
 import { Page } from '../App';
 import { calculateModeExp, getLevelFromExp } from '../utils/gameModes';
+import { loadAllUserData } from '../utils/firestore';
 
 interface NavbarProps {
   currentPage: Page;
@@ -20,6 +21,7 @@ const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [screenDimensions, setScreenDimensions] = useState({ width: 0, height: 0 });
+  const [firestoreData, setFirestoreData] = useState<any>(null);
   const userId = user?.uid || 'guest';
 
   // Detect screen dimensions and orientation
@@ -37,6 +39,27 @@ const Navbar: React.FC<NavbarProps> = ({
   const isVerticalMonitor = useMemo(() => {
     return screenDimensions.width > 0 && screenDimensions.height > screenDimensions.width;
   }, [screenDimensions]);
+
+  // Load Firestore data for authenticated users
+  useEffect(() => {
+    if (userId !== 'guest' && user?.uid) {
+      console.log('📥 [Navbar] Loading Firestore data for user:', userId);
+      loadAllUserData(userId).then(data => {
+        if (data) {
+          console.log('✅ [Navbar] Firestore data loaded:', data);
+          setFirestoreData(data);
+        } else {
+          console.log('⚠️ [Navbar] No Firestore data found');
+          setFirestoreData(null);
+        }
+      }).catch(error => {
+        console.error('❌ [Navbar] Error loading Firestore data:', error);
+        setFirestoreData(null);
+      });
+    } else {
+      setFirestoreData(null);
+    }
+  }, [userId, user?.uid, refreshTrigger]);
 
   // Listen for stats updates
   useEffect(() => {
@@ -114,12 +137,24 @@ const Navbar: React.FC<NavbarProps> = ({
     });
 
     const { level, currentLevelExp, expToNextLevel } = getLevelFromExp(totalExp);
-    // Always get fresh values from localStorage - these update when Firestore loads
-    const activeTitle = localStorage.getItem('selectedTitle') || '';
-    const username = localStorage.getItem('username') || '';
-    console.log('🔍 [Navbar] playerProgress recalculating - username:', username, ', title:', activeTitle);
+    
+    // Use Firestore data if available, otherwise fallback to localStorage
+    let activeTitle = '';
+    let username = '';
+    
+    if (firestoreData?.profile) {
+      activeTitle = firestoreData.profile.activeTitle || '';
+      username = firestoreData.profile.username || '';
+      console.log('🔍 [Navbar] Using Firestore data - username:', username, ', title:', activeTitle);
+    } else {
+      // Fallback to localStorage for guest users or when Firestore data isn't loaded yet
+      activeTitle = localStorage.getItem('selectedTitle') || '';
+      username = localStorage.getItem('username') || '';
+      console.log('🔍 [Navbar] Using localStorage fallback - username:', username, ', title:', activeTitle);
+    }
+    
     return { level, exp: totalExp, currentLevelExp, expToNextLevel, totalStars, activeTitle, username };
-  }, [userId, refreshTrigger]); // refreshTrigger will update when profile/stats change via statsUpdate event
+  }, [userId, refreshTrigger, firestoreData]); // refreshTrigger will update when profile/stats change via statsUpdate event
   // Order: Home, Game Overview, Features, About (far right)
   const navItems = [
     { id: 'home' as Page, label: 'Home', icon: Home },
@@ -421,14 +456,14 @@ const Navbar: React.FC<NavbarProps> = ({
                   </div>
                   <div className="h-5 w-px bg-slate-600/50"></div>
                   <div className="flex flex-col">
-                    <span className="text-xs font-bold text-cyan-400">Lv {playerProgress.level}</span>
+                    <span className="text-xs font-bold text-gray-300">Lv {playerProgress.level}</span>
                     {playerProgress.activeTitle && (
-                      <span className="text-[0.55rem] text-purple-300 italic truncate max-w-[100px]">{playerProgress.activeTitle}</span>
+                      <span className="text-[0.55rem] text-gray-300 italic truncate max-w-[100px]">{playerProgress.activeTitle}</span>
                     )}
                     {/* Mobile Progress Bar */}
                     <div className="w-20 h-0.5 bg-slate-900/50 rounded-full overflow-hidden mt-0.5">
                       <div 
-                        className="h-full bg-gradient-to-r from-cyan-400 to-purple-500 transition-all duration-500"
+                        className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-500"
                         style={{ width: `${Math.min(100, (playerProgress.currentLevelExp / playerProgress.expToNextLevel) * 100)}%` }}
                       ></div>
                     </div>

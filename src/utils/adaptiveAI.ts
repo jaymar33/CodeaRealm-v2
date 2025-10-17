@@ -168,27 +168,32 @@ export function unlockLessonsBasedOnPerformance(
   // Calculate which lessons to unlock based on AI decision
   const lessonsToUnlock: number[] = [];
   
-  if (decision.advanceByLessons === 0) {
-    // Repeat current lesson - just unlock the next level in current lesson if not completed
-    const nextInLesson = currentLevel + 1;
-    const lessonEnd = currentLesson * 3;
-    if (nextInLesson <= lessonEnd) {
-      lessonsToUnlock.push(nextInLesson);
-    }
-  } else {
-    // Unlock multiple lessons (1-3 lessons = 3-9 levels)
-    for (let i = 1; i <= decision.advanceByLessons; i++) {
+  // BASIC PROGRESSION: Always unlock the next lesson for basic completion
+  const nextLesson = currentLesson + 1;
+  const nextLessonStart = (nextLesson - 1) * 3 + 1;
+  const nextLessonEnd = nextLesson * 3;
+  
+  // Add the next lesson (3 levels) for basic progression
+  for (let level = nextLessonStart; level <= nextLessonEnd && level <= 150; level++) {
+    lessonsToUnlock.push(level);
+  }
+  
+  // AI-ENHANCED PROGRESSION: Add bonus lessons based on performance
+  if (decision.advanceByLessons > 1) {
+    // Unlock additional lessons based on AI decision
+    for (let i = 2; i <= decision.advanceByLessons; i++) {
       const targetLesson = currentLesson + i;
       const lessonStart = (targetLesson - 1) * 3 + 1;
       const lessonEnd = targetLesson * 3;
       
-      // Add all 3 levels of each lesson
+      // Add all 3 levels of each bonus lesson
       for (let level = lessonStart; level <= lessonEnd && level <= 150; level++) {
         lessonsToUnlock.push(level);
       }
     }
   }
   
+  console.log(`🔓 Unlocking levels for ${language} lesson ${currentLesson}:`, lessonsToUnlock);
   return lessonsToUnlock;
 }
 

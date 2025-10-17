@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sword, Shield, Wand2, Settings, Star, Lock, Play, CheckCircle, X } from 'lucide-react';
+import { Sword, Shield, Wand2, Settings, Star, Lock, Play, CheckCircle, X, ArrowLeft } from 'lucide-react';
 import { Page } from '../App';
 import { loadPlayerProgress } from '../utils/firestore';
 import { getSuggestionBanner, unlockLessonsBasedOnPerformance } from '../utils/adaptiveAI';
@@ -19,6 +19,7 @@ const GameOverview: React.FC<GameOverviewProps> = ({ onNavigate, selectedLanguag
   const [showLessonModal, setShowLessonModal] = useState(false);
   const [showDragDropModal, setShowDragDropModal] = useState(false);
   const [selectedLesson, setSelectedLesson] = useState<number | null>(null);
+  const [selectedDifficulty, setSelectedDifficulty] = useState<'easy' | 'intermediate' | 'advanced' | null>(null);
 
   // Load progress based on user authentication status
   useEffect(() => {
@@ -31,7 +32,7 @@ const GameOverview: React.FC<GameOverviewProps> = ({ onNavigate, selectedLanguag
       const unlockedKey = `guest_${selectedLanguage}_unlockedLevels`;
       
       const storedCompleted = JSON.parse(localStorage.getItem(languageKey) || '[]');
-      const storedUnlocked = JSON.parse(localStorage.getItem(unlockedKey) || '[1,2,3,4,5,6,7,8,9]'); // First 3 lessons (9 levels) unlocked
+      const storedUnlocked = JSON.parse(localStorage.getItem(unlockedKey) || '[]'); // Start with empty array
       setCompletedLevels(storedCompleted);
       setUnlockedLevels(storedUnlocked);
     } else {
@@ -43,7 +44,14 @@ const GameOverview: React.FC<GameOverviewProps> = ({ onNavigate, selectedLanguag
     ensureMinimumUnlocking();
   }, [selectedLanguage]);
 
-  // Ensure minimum unlocking (always at least 3 levels unlocked)
+  // Update unlocking when difficulty changes
+  useEffect(() => {
+    if (selectedDifficulty) {
+      ensureMinimumUnlocking();
+    }
+  }, [selectedDifficulty]);
+
+  // Ensure minimum unlocking based on difficulty
   const ensureMinimumUnlocking = () => {
     const userId = localStorage.getItem('userId') || 'guest';
     const unlockedKey = userId === 'guest' 
@@ -52,16 +60,36 @@ const GameOverview: React.FC<GameOverviewProps> = ({ onNavigate, selectedLanguag
     
     const storedUnlocked = JSON.parse(localStorage.getItem(unlockedKey) || '[]');
     
-    // Ensure at least 3 levels (1 lesson) are always unlocked
-    const minUnlocked = [1, 2, 3];
-    const finalUnlocked = [...new Set([...minUnlocked, ...storedUnlocked])].sort((a, b) => a - b);
+    // Default unlocking based on difficulty:
+    // Easy: Lessons 1-3 (levels 1-9)
+    // Intermediate: Lesson 21 (levels 61-63) 
+    // Advanced: Lesson 41 (levels 121-123)
+    let minUnlocked: number[];
     
-    // Ensure we don't exceed 9 levels (3 lessons) unless user is performing exceptionally
-    const maxUnlocked = Math.min(9, ...finalUnlocked);
-    const cappedUnlocked = finalUnlocked.filter(level => level <= maxUnlocked);
+    if (selectedDifficulty === 'easy') {
+      minUnlocked = [1, 2, 3, 4, 5, 6, 7, 8, 9]; // Lessons 1-3
+    } else if (selectedDifficulty === 'intermediate') {
+      minUnlocked = [61, 62, 63]; // Lesson 21
+    } else if (selectedDifficulty === 'advanced') {
+      minUnlocked = [121, 122, 123]; // Lesson 41
+    } else {
+      // Default to easy if no difficulty selected
+      minUnlocked = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+    }
     
-    setUnlockedLevels(cappedUnlocked);
-    localStorage.setItem(unlockedKey, JSON.stringify(cappedUnlocked));
+    // Only merge with stored unlocked levels that are within the current difficulty range
+    const difficultyRange = selectedDifficulty === 'easy' ? [1, 60] : 
+                           selectedDifficulty === 'intermediate' ? [61, 120] : 
+                           selectedDifficulty === 'advanced' ? [121, 150] : [1, 60];
+    
+    const filteredStored = storedUnlocked.filter((level: number) => 
+      level >= difficultyRange[0] && level <= difficultyRange[1]
+    );
+    
+    const finalUnlocked = [...new Set([...minUnlocked, ...filteredStored])].sort((a, b) => a - b);
+    
+    setUnlockedLevels(finalUnlocked);
+    localStorage.setItem(unlockedKey, JSON.stringify(finalUnlocked));
   };
 
   // Apply adaptive progression when levels are completed
@@ -199,17 +227,17 @@ const GameOverview: React.FC<GameOverviewProps> = ({ onNavigate, selectedLanguag
         const unlockedKey = `${selectedLanguage}_unlockedLevels`;
         
         setCompletedLevels(progress[languageKey] || []);
-        setUnlockedLevels(progress[unlockedKey] || [1, 2, 3, 4, 5, 6, 7, 8, 9]);
+        setUnlockedLevels(progress[unlockedKey] || []);
       } else {
         // If no saved progress, start fresh
         setCompletedLevels([]);
-        setUnlockedLevels([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+        setUnlockedLevels([]);
       }
     } catch (error) {
       console.error('Error loading user progress:', error);
       // Fallback to default
       setCompletedLevels([]);
-      setUnlockedLevels([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+      setUnlockedLevels([]);
     }
   };
   const languages = [
@@ -297,9 +325,21 @@ const GameOverview: React.FC<GameOverviewProps> = ({ onNavigate, selectedLanguag
   };
 
   const generateLevels = () => {
-    // 50 lessons × 3 levels each = 150 levels; show lessons with their 3 sub-levels on click
-    return Array.from({ length: 50 }, (_, i) => {
-      const lessonNum = i + 1;
+    // Filter lessons based on selected difficulty
+    let lessonRange: [number, number];
+    if (selectedDifficulty === 'easy') {
+      lessonRange = [1, 20]; // Lessons 1-20
+    } else if (selectedDifficulty === 'intermediate') {
+      lessonRange = [21, 40]; // Lessons 21-40
+    } else if (selectedDifficulty === 'advanced') {
+      lessonRange = [41, 50]; // Lessons 41-50
+    } else {
+      return []; // No difficulty selected
+    }
+
+    // Generate lessons for the selected difficulty range
+    return Array.from({ length: lessonRange[1] - lessonRange[0] + 1 }, (_, i) => {
+      const lessonNum = lessonRange[0] + i;
       const levelNum = (lessonNum - 1) * 3 + 1; // representative level for the card
       const maxUnlocked = Math.max(3, ...unlockedLevels, 0);
       const isUnlocked = levelNum <= maxUnlocked || unlockedLevels.includes(levelNum) || unlockedLevels.includes(levelNum + 1) || unlockedLevels.includes(levelNum + 2);
@@ -553,17 +593,107 @@ const GameOverview: React.FC<GameOverviewProps> = ({ onNavigate, selectedLanguag
         </div>
       </section>
 
-      {/* Level Overview */}
-      <section className="py-16 px-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-cyan-400">
-              {languages.find(l => l.id === selectedLanguage)?.name} Journey
-            </h2>
-            <p className="text-xl text-gray-300">
-              150 Progressive Levels (50 Lessons × 3 Levels) • Story-Driven Challenges • Real Code Practice
-            </p>
+      {/* Difficulty Selection */}
+      {!selectedDifficulty && (
+        <section className="py-16 px-4">
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center mb-12">
+              <h2 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
+                {languages.find(l => l.id === selectedLanguage)?.name} Journey
+              </h2>
+              <p className="text-xl text-gray-300">
+                Choose your difficulty level to begin your coding adventure
+              </p>
+            </div>
+            
+            <div className="grid md:grid-cols-3 gap-8">
+              <div
+                onClick={() => setSelectedDifficulty('easy')}
+                className="cursor-pointer group bg-gradient-to-br from-slate-800/50 to-slate-900/50 p-6 rounded-2xl border border-green-500/30 transition-all duration-300 hover:transform hover:scale-105 hover:border-green-500/50"
+              >
+                <div className="text-center">
+                  <div className="w-20 h-20 flex items-center justify-center mx-auto mb-6 text-5xl">
+                    🌱
+                  </div>
+                  <h3 className="text-2xl font-bold mb-2 text-green-400">Easy</h3>
+                  <p className="text-gray-300 font-semibold mb-4">Lessons 1-20</p>
+                  <p className="text-gray-300 mb-6 text-sm leading-relaxed">
+                    Perfect for beginners. Learn the basics with guided tutorials and simple challenges.
+                  </p>
+                  <div className="inline-block bg-green-800 hover:bg-green-700 px-6 py-3 rounded-lg text-sm font-semibold text-green-200 transition-all duration-300">
+                    20 Lessons
+                  </div>
+                </div>
+              </div>
+
+              <div
+                onClick={() => setSelectedDifficulty('intermediate')}
+                className="cursor-pointer group bg-gradient-to-br from-slate-800/50 to-slate-900/50 p-6 rounded-2xl border border-orange-500/30 transition-all duration-300 hover:transform hover:scale-105 hover:border-orange-500/50"
+              >
+                <div className="text-center">
+                  <div className="w-20 h-20 flex items-center justify-center mx-auto mb-6 text-5xl">
+                    ⚡
+                  </div>
+                  <h3 className="text-2xl font-bold mb-2 text-orange-400">Intermediate</h3>
+                  <p className="text-gray-300 font-semibold mb-4">Lessons 21-40</p>
+                  <p className="text-gray-300 mb-6 text-sm leading-relaxed">
+                    For those ready to level up. More complex concepts and real-world applications.
+                  </p>
+                  <div className="inline-block bg-orange-800 hover:bg-orange-700 px-6 py-3 rounded-lg text-sm font-semibold text-orange-200 transition-all duration-300">
+                    20 Lessons
+                  </div>
+                </div>
+              </div>
+
+              <div
+                onClick={() => setSelectedDifficulty('advanced')}
+                className="cursor-pointer group bg-gradient-to-br from-slate-800/50 to-slate-900/50 p-6 rounded-2xl border border-red-500/30 transition-all duration-300 hover:transform hover:scale-105 hover:border-red-500/50"
+              >
+                <div className="text-center">
+                  <div className="w-20 h-20 flex items-center justify-center mx-auto mb-6 text-5xl">
+                    🔥
+                  </div>
+                  <h3 className="text-2xl font-bold mb-2 text-red-400">Advanced</h3>
+                  <p className="text-gray-300 font-semibold mb-4">Lessons 41-50</p>
+                  <p className="text-gray-300 mb-6 text-sm leading-relaxed">
+                    Master-level challenges. Complex algorithms, design patterns, and expert techniques.
+                  </p>
+                  <div className="inline-block bg-red-800 hover:bg-red-700 px-6 py-3 rounded-lg text-sm font-semibold text-red-200 transition-all duration-300">
+                    10 Lessons
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
+        </section>
+      )}
+
+      {/* Level Overview */}
+      {selectedDifficulty && (
+        <section className="py-16 px-4">
+          <div className="max-w-6xl mx-auto">
+            <div className="mb-12">
+              <div className="flex items-center justify-between mb-6">
+                <button
+                  onClick={() => setSelectedDifficulty(null)}
+                  className="text-cyan-400 hover:text-cyan-300 flex items-center space-x-2 bg-cyan-400/10 px-3 py-1.5 rounded-lg border border-cyan-400/20 hover:bg-cyan-400/20 transition-all duration-300 text-sm"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  <span>Back to Difficulty Selection</span>
+                </button>
+                <div className="text-center flex-1">
+                  <h2 className="text-3xl md:text-4xl font-bold mb-2 text-cyan-400">
+                    {selectedDifficulty === 'easy' ? '🌱 Easy' : selectedDifficulty === 'intermediate' ? '⚡ Intermediate' : '🔥 Advanced'} Lessons
+                  </h2>
+                  <p className="text-xl text-gray-300">
+                    {selectedDifficulty === 'easy' ? 'Lessons 1-20 (60 Levels)' : 
+                     selectedDifficulty === 'intermediate' ? 'Lessons 21-40 (60 Levels)' : 
+                     'Lessons 41-50 (30 Levels)'} • Story-Driven Challenges • Real Code Practice
+                  </p>
+                </div>
+                <div className="w-48"></div>
+              </div>
+            </div>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
               {levels.map((level) => (
@@ -622,15 +752,21 @@ const GameOverview: React.FC<GameOverviewProps> = ({ onNavigate, selectedLanguag
 
           <div className="text-center mt-12">
             <button
-              onClick={() => { localStorage.setItem('selectedLevel', '1'); onNavigate('code-editor'); }}
+              onClick={() => { 
+                const startLevel = selectedDifficulty === 'easy' ? '1' : 
+                                 selectedDifficulty === 'intermediate' ? '61' : '121';
+                localStorage.setItem('selectedLevel', startLevel); 
+                onNavigate('code-editor'); 
+              }}
               className="inline-flex items-center space-x-3 bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700 px-8 py-4 rounded-full text-lg font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-cyan-500/25"
             >
               <Play className="h-6 w-6" />
-              <span>Start Lesson 1</span>
+              <span>Start First Lesson</span>
             </button>
           </div>
         </div>
       </section>
+      )}
 
       {/* Puzzle Modal */}
       {showPuzzleModal && (

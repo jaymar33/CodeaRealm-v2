@@ -113,16 +113,16 @@ const ArcaneCodeEditorPanel: React.FC<ArcaneCodeEditorPanelProps> = ({
       {!isExpanded && (
         <button
           onClick={() => setIsExpanded(true)}
-          className="bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-700 hover:to-cyan-700 text-white p-4 rounded-full shadow-lg hover:shadow-purple-500/50 transition-all duration-300 transform hover:scale-110 animate-pulse"
+          className="bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-700 hover:to-cyan-700 text-white p-2.5 rounded-full shadow-lg hover:shadow-purple-500/50 transition-all duration-300 transform hover:scale-110 animate-pulse"
           title="Open Arcane Mentor"
         >
-          <Sparkles className="h-6 w-6" />
+          <Sparkles className="h-5 w-5" />
         </button>
       )}
 
       {/* Expanded State */}
       {isExpanded && (
-        <div className="bg-gradient-to-br from-slate-900/95 to-slate-800/95 backdrop-blur-md border border-purple-500/50 rounded-xl shadow-2xl w-80 max-h-96 overflow-hidden">
+        <div className="bg-gradient-to-br from-slate-900/95 to-slate-800/95 backdrop-blur-md border border-purple-500/50 rounded-xl shadow-2xl w-80 max-w-sm min-w-72 max-h-96 overflow-hidden">
           {/* Header */}
           <div className="bg-gradient-to-r from-purple-600/20 to-cyan-600/20 p-3 border-b border-purple-500/30">
             <div className="flex items-center justify-between">
@@ -165,7 +165,7 @@ const ArcaneCodeEditorPanel: React.FC<ArcaneCodeEditorPanelProps> = ({
                 <Lightbulb className="h-4 w-4 text-cyan-400" />
                 <span className="text-sm text-cyan-300 font-semibold">Live Guidance</span>
               </div>
-              <div className="text-gray-300 text-sm">{hint || 'Waiting for activity...'}</div>
+              <div className="text-gray-300 text-sm leading-relaxed break-words overflow-wrap-anywhere">{hint || 'Waiting for activity...'}</div>
             </div>
 
             {/* Current Status */}

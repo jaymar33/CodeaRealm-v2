@@ -260,7 +260,7 @@ export const testFirestoreRules = async (userId: string): Promise<boolean> => {
       lastUpdated: new Date().toISOString()
     }, { merge: true });
     
-    const starsSnap = await getDoc(testStarsRef);
+    await getDoc(testStarsRef);
     console.log('✅ playerStats write/read test passed');
     
     // Test userProfiles collection
@@ -270,7 +270,7 @@ export const testFirestoreRules = async (userId: string): Promise<boolean> => {
       lastUpdated: new Date().toISOString()
     }, { merge: true });
     
-    const profileSnap = await getDoc(testProfileRef);
+    await getDoc(testProfileRef);
     console.log('✅ userProfiles write/read test passed');
     
     // Clean up test data
