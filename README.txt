@@ -1,7 +1,6 @@
-README.txt
+# README.txt
 
-**Note:** This version does not yet include Firebase/XAMPP.  
-**To add in future iterations:** Firebase for authentication and user management, as well as a backend for persistent data handling.
+**Note:** This version includes Firebase integration for authentication and user management, as well as Judge0 API for secure code execution.
 
 ---
 
@@ -12,8 +11,9 @@ README.txt
 - TailwindCSS 3, PostCSS, Autoprefixer
 - ESLint
 - lucide-react (icon library)
-- Firebase
-- XAMPP
+- Firebase (Authentication + Firestore)
+- Judge0 API (Code Execution)
+- RapidAPI (Judge0 Integration)
 
 ---
 
@@ -21,120 +21,107 @@ README.txt
 - `index.html` – Root HTML file
 - `src/main.tsx` – Application entry point, mounts the root component
 - `src/App.tsx` – Central container, manages page switching and language state
-- `src/components/Navbar.tsx` – Top navigation bar for switching between sections
+- `src/components/Navbar.tsx` – Top navigation bar with user authentication and progress tracking
 - `src/components/ParticleBackground.tsx` – Animated particle background implemented using `<canvas>`
+- `src/components/AuthModal.tsx` – User authentication modal (sign in/sign up)
+- `src/components/ArcaneCodeEditorPanel.tsx` – Advanced code editor with syntax highlighting
+- `src/components/ArcaneMentorPanel.tsx` – AI mentor system for adaptive learning
 - `src/pages/Home.tsx` – Landing section with call-to-action elements
 - `src/pages/About.tsx` – Description of the project purpose and learning goals
 - `src/pages/Features.tsx` – Feature grid and navigation options
-- `src/pages/GameOverview.tsx` – Language selection and introductory information with a start button
-- `src/pages/CodeEditor.tsx` – Simple in-browser code editor and level progression
+- `src/pages/GameOverview.tsx` – Language selection and difficulty-based level progression
+- `src/pages/CodeEditor.tsx` – Full-featured code editor with validation and progression system
+- `src/pages/ArcaneMentor.tsx` – AI-powered learning assistant
+- `src/pages/ArcaneShowcase.tsx` – Feature showcase and demonstrations
+- `src/pages/DragDrop.tsx` – Drag-and-drop coding challenges
+- `src/pages/Stats.tsx` – User statistics and progress tracking
+- `src/pages/AIGuide.tsx` – AI learning guide and tips
+- `src/data/challenges/` – Challenge definitions for Python, JavaScript, and Java
+- `src/utils/` – Utility functions for authentication, Firestore, code execution, and AI
+- `src/firebaseConfig.ts` – Firebase configuration
 
 ---
 
 ## Code Explanations
 
 ### App.tsx
-- Maintains two pieces of state:
-  - `currentPage`: Determines which page is currently displayed. Possible values are `'home' | 'about' | 'game-overview' | 'features' | 'code-editor'`.
-  - `selectedLanguage`: Tracks the programming language chosen by the user (`'javascript' | 'java' | 'python'`).
-- Renders the `Navbar` component and passes the navigation function to child components.
-- Renders one of the page components (`Home`, `About`, `GameOverview`, `Features`, or `CodeEditor`) based on the current state.
+- Maintains state for current page and selected programming language
+- Manages user authentication state and navigation
+- Renders appropriate page components based on current state
+- Handles Firebase authentication state changes
 
 ### Navbar.tsx
-- Provides navigation buttons for switching between pages.
-- Uses icon buttons and responsive design to adjust for different screen sizes.
-- Invokes the `onNavigate` function to update the current page when an option is selected.
+- Provides navigation between different sections
+- Displays user authentication status and progress
+- Shows user profile information and achievements
+- Responsive design with mobile-friendly navigation
 
-### ParticleBackground.tsx
-- Implements a canvas animation of moving particles connected by lines when close to each other.
-- Resizes dynamically with the window to maintain coverage of the screen.
-- Adds a visual background effect for improved user experience.
-
-### Home.tsx
-- Displays the landing section with a title, hero text, and call-to-action buttons.
-- Uses icons and styled sections to introduce the platform to users.
-
-### About.tsx
-- Provides a detailed explanation of the platform, its mission, and target audience.
-- Includes comparison tables and highlights the benefits of using the platform.
-
-### Features.tsx
-- Lists the main features such as the professional code editor, quest-based learning, adaptive difficulty, progress tracking, and interactive challenges.
-- Includes navigation buttons leading to other sections.
+### CodeEditor.tsx (Core Game Engine)
+- **State Management**: Manages code input, output, level progression, stars, hints, and completion status
+- **Code Execution**: Uses Judge0 API for secure code execution across Python, JavaScript, and Java
+- **Validation System**: Lesson-specific validation patterns for 50 lessons per language (150 levels total)
+- **Star Calculation**: 3-star system based on hint usage and completion speed
+- **Level Progression**: Automatic unlocking of next lesson (3 levels) upon completion
+- **Game Modes**: Main game (full editor) and Puzzle mode (fill-in-the-blank)
+- **Data Persistence**: Saves progress to localStorage and Firestore
 
 ### GameOverview.tsx
-- Allows users to choose between JavaScript, Java, or Python as their learning path.
-- Generates and displays sample levels with progressive difficulty.
-- Displays different types of quests, including story quests, drag-and-drop challenges, and code puzzles.
-- Provides a start button that navigates to the Code Editor.
+- **Difficulty Selection**: Easy (Lessons 1-20), Intermediate (Lessons 21-40), Advanced (Lessons 41-50)
+- **Language Support**: Python, JavaScript, and Java with language-specific content
+- **Progress Tracking**: Shows completed levels, stars earned, and unlocked content
+- **Level Generation**: Creates lesson cards with proper difficulty progression
 
-### CodeEditor.tsx
-- Defines state variables including `code`, `output`, `isRunning`, `currentLevel`, `showHint`, and `isCompleted`.
-- On execution, creates a mock `console` object to capture log output.
-- Uses `new Function('console', code)` to run user code with the mocked console.
-- Displays captured logs or success messages in the output panel. Errors are caught and shown to the user.
-- Includes a placeholder completion rule: the code must contain the keywords “welcome” and “coderealm” to mark a level as complete.
-- Provides functionality to reset the editor and increment the level number. Currently, up to 20 levels are available, though no detailed content is defined.
-- At present, only JavaScript execution is supported. Options for Java and Python are placeholders.
+### Firebase Integration
+- **Authentication**: User sign-in/sign-up with email and password
+- **Firestore**: Stores user progress, completed levels, stars, and achievements
+- **Real-time Sync**: Progress syncs across devices for authenticated users
+- **Guest Mode**: LocalStorage fallback for non-authenticated users
 
-**Security Note:** Running arbitrary code in the browser with `new Function` is not secure for production. Future implementations should use sandboxing strategies such as Web Workers with strict CSP, or offload execution to a secure backend service.
+### Judge0 API Integration
+- **Secure Execution**: Code runs on remote servers, not in browser
+- **Multi-language Support**: Python (71), JavaScript (63), Java (62)
+- **Error Handling**: Compilation errors, runtime errors, and execution failures
+- **Output Capture**: Captures stdout, stderr, and execution status
 
 ---
 
 ## Requirements
 - Node.js version 18 or newer
 - npm (Node package manager)
+- Firebase project with Authentication and Firestore enabled
+- RapidAPI account with Judge0 API access
 
 ---
 
 ## Installation Steps
-1. Unzip the project files.
-2. Open a terminal and navigate to the project root directory containing `package.json`.  
-   Example: `cd project`
-3. Install dependencies:  
-   `npm install`
-4. Start the development server:  
-   `npm run dev`  
-   Open the displayed local URL in a browser.
-5. Build the production bundle:  
-   `npm run build`  
-   Output will be created in the `dist/` directory.
-6. Preview the production build:  
-   `npm run preview`
+1. Clone or download the project files
+2. Open a terminal and navigate to the project root directory
+3. Install dependencies: `npm install`
+4. Configure Firebase:
+   - Create a Firebase project
+   - Enable Authentication (Email/Password)
+   - Enable Firestore Database
+   - Copy config to `src/firebaseConfig.ts`
+5. Configure Judge0 API:
+   - Get RapidAPI key from RapidAPI Judge0 endpoint
+   - Update API key in `src/utils/runCode.ts`
+6. Start the development server: `npm run dev`
+7. Open the displayed local URL in a browser
 
 ---
 
-## Usage Instructions
-1. Launch the application and use the Navbar to navigate between sections.
-2. Open the Game Overview page and select a language. Only JavaScript is functional in this version.
-3. Click the Start button to proceed to the Code Editor.
-4. Enter JavaScript code in the text area and click “Run Code”.
-5. Review the output panel for logs or error messages.
-6. Complete the simple placeholder rule to mark the level as completed.
+## Game Features
 
----
+### Educational Content
+- **50 Lessons per Language**: Comprehensive curriculum covering beginner to advanced topics
+- **W3Schools Aligned**: Content follows established learning paths
+- **Story-Driven**: Immersive CodeRealm theme with educational narratives
+- **Progressive Difficulty**: Easy → Intermediate → Advanced progression
 
-## Future Enhancements
-**This version does not yet include Firebase.**  
-**To be added:**
-- Firebase for authentication, user profiles, and data persistence
-- Backend service for secure code execution, progress tracking, and storage
-
-Additional improvements planned:
-- Replace manual state navigation with React Router
-- Implement real content and validators for levels
-- Provide proper support for Java and Python execution
-- Save progress to a database
-- Introduce testing frameworks such as Vitest or Jest
-- Add end-to-end testing with Playwright or Cypress
-- Improve accessibility features and TypeScript strictness
-- Prepare CI/CD pipeline for deployment on services such as Vercel or Netlify
-
----
-
-## Notes on Firebase Integration
-- Firebase Authentication will provide secure user sign-in and session management.
-- Firestore will be used to store user progress, code submissions, and profile information.
-- Firebase Cloud Functions can be used for secure validations and code execution where necessary.
-
-This project has been structured to allow straightforward integration of Firebase and backend services in later iterations.
+### Technical Features
+- **Multi-Language Support**: Python, JavaScript, Java with language-specific validation
+- **Real Code Execution**: Secure execution via Judge0 API
+- **Star System**: 3-star rating based on performance
+- **Hint System**: Progressive hint
+- **Progress Tracking**: Detailed statistics and achievement system
+- **Responsive Design**: Works on desktop, tablet, and mobile
